@@ -2,39 +2,64 @@
 import React from "react";
 import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { getServerSession } from "next-auth";
+import { signOut } from "next-auth/react";
 
-const Navbar: React.FC = () => {
+const Navbar: React.FC = async () => {
+  const session = await getServerSession(); 
+  const onLogout = () => {
+    signOut()
+  }
   return (
-    <nav className="flex justify-between px-5 py-2 bg-gray-500">
-      <Link href="/" className="text-black mt-2">
-        Trial-Test-Ryuta
-      </Link>
-      <ul className="flex">
-        <li className="mt-2">
-          <Link href="/swap" className="text-black ">
-            Swap
-          </Link>
-        </li>
-        <li className="mt-2 ml-5">
-          <Link href="/login" className="text-black ">
-            Login
-          </Link>
-        </li>
-        <li className="mt-2 ml-5">
-          <Link href="/register" className="text-black ">
-            Register
-          </Link>
-        </li>
-        <li className="mt-2 ml-5">
-          <Link href="/tokens" className="text-black ">
-            Tokens
-          </Link>
-        </li>
-        <li className="ml-5">
-          <ConnectButton />
-        </li>
-      </ul>
-    </nav>
+    <>
+      {
+        session ? (
+          <nav className="flex justify-between px-5 py-2 bg-gray-500 sticky top-0">
+            <Link href="/" className="text-black mt-2">
+              Trial-Test-Ryuta
+            </Link>
+            <ul className="flex">
+              <li className="mt-2">
+                <Link href="#" className="text-black " onClick={() => onLogout()}>
+                  Logout
+                </Link>
+              </li>
+              <li className="mt-2 ml-5">
+                <Link href="/swap" className="text-black ">
+                  Swap
+                </Link>
+              </li>
+              <li className="mt-2 ml-5">
+                <Link href="/tokens" className="text-black ">
+                  Tokens
+                </Link>
+              </li>
+              <li className="ml-5">
+                <ConnectButton />
+              </li>
+            </ul>
+          </nav>
+        ) : (
+          <nav className="flex justify-between px-5 py-2 bg-gray-500 sticky top-0">
+            <Link href="/" className="text-black mt-2">
+              Trial-Test-Ryuta
+            </Link>
+            <ul className="flex">
+              <li className="mt-2 ml-5">
+                <Link href="/login" className="text-black ">
+                  Login
+                </Link>
+              </li>
+              <li className="mt-2 ml-5">
+                <Link href="/register" className="text-black ">
+                  Register
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        )
+      }
+    </>
   )
 }
 
