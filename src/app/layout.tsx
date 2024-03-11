@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import WalletProvider from '../context/WalletProvider';
 import './globals.css'
+import "@rainbow-me/rainbowkit/styles.css";
+import Navbar from '@/layout/navbar';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,7 +19,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <WalletProvider>
+          <Navbar />
+          {children}
+        </WalletProvider>
+      </body>
     </html>
   )
 }
