@@ -10,7 +10,17 @@ const Navbar: React.FC = () => {
         Trial-Test-Ryuta
       </Link>
       <ul className="flex">
-        <li className="ml-4">
+        <li className="mt-2">
+          <Link href="/swap" className="text-black ">
+            Swap
+          </Link>
+        </li>
+        <li className="mt-2 ml-5">
+          <Link href="/tokens" className="text-black ">
+            Tokens
+          </Link>
+        </li>
+        <li className="ml-5">
           <ConnectButton />
         </li>
       </ul>

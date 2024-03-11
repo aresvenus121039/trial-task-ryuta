@@ -34,9 +34,21 @@ export default function Tokens() {
   const [loading, setLoading] = useState(false);
   const [distanceBottom, setDistanceBottom] = useState(0);
   const [hasMore] = useState(true);
+  const [filterName, setFilterName] = useState<string>("");
 
   useEffect(() => {
-    setTokenDatas(generateDatas(50));
+    const fetchData = async () => {
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 50, name: filterName })
+      };
+      const response = await fetch('/api/tokens', requestOptions);
+      const data = await response.json();
+      
+      setTokenDatas(data.data)
+    }
+    fetchData()
   },[])
 
   const loadMore = useCallback(() => {
@@ -44,15 +56,15 @@ export default function Tokens() {
       await new Promise<void>((resolve) =>
         setTimeout(async () => {
           const amount = tokenDatas.length + 30;
-          // const requestOptions = {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify({ amount: amount, name: filterName })
-          // };
-          // const response = await fetch('/api/get-tokens', requestOptions);
-          // const data = await response.json();
+          const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amount, name: filterName })
+          };
+          const response = await fetch('/api/tokens', requestOptions);
+          const data = await response.json();
       
-          setTokenDatas(generateDatas(amount))
+          setTokenDatas(data.data)
           setLoading(false);
           resolve();
         }, 1000)
@@ -88,12 +100,40 @@ export default function Tokens() {
     };
   }, [scrollListener]);
 
+  const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setFilterName(e.target.value);
+    filterToken()
+  }
+  const filterToken = async () => {
+    if(filterName == ""){
+      const options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 50, name: filterName })
+      };
+      const res = await fetch('/api/tokens', options);
+      const dataa = await res.json();
+      
+      setTokenDatas(dataa.data)
+      return;
+    }
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: filterName })
+    };
+    const response = await fetch('/api/tokens-filter', requestOptions);
+    const data = await response.json();
+    setTokenDatas(data.data);
+  }
+
   return (
     <div className="px-5 ">
       <div className="w-full flex justify-end mt-3" style={{ maxWidth: '80%'}}>
         <div className="flex w-full max-w-sm items-center space-x-2">
-          <Input type="email" placeholder="keyword..." />
-          <Button type="submit">Search</Button>
+          <Input type="email" placeholder="keyword..." onChange={onChange}/>
+          <Button type="submit" onClick={() => filterToken()}>Search</Button>
         </div>
       </div>
       <div className="flex justify-center">
@@ -108,12 +148,12 @@ export default function Tokens() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tokenDatas.map((item, id) => (
+              {tokenDatas.length > 0 && tokenDatas.map((item, id) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{id + 1}</TableCell>
                   <TableCell>{item.symbol}</TableCell>
-                  <TableCell>{item.decimals}</TableCell>
-                  <TableCell className="text-right">{item.volume}</TableCell>
+                  <TableCell>{item.tokenDayData[0].priceUSD.split(".")[0]}</TableCell>
+                  <TableCell className="text-right">{item.volumeUSD.split(".")[0]}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
