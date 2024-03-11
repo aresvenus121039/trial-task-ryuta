@@ -7,14 +7,11 @@ import {
   connectorsForWallets,
 } from "@rainbow-me/rainbowkit";
 import {
-  argentWallet,
-  trustWallet,
-  ledgerWallet,
+  argentWallet
 } from "@rainbow-me/rainbowkit/wallets";
 import { Chain, configureChains, createConfig, WagmiConfig } from "wagmi";
-import { alchemyProvider } from "wagmi/providers/alchemy";
 import { publicProvider } from "wagmi/providers/public";
-import { mainnet, sepolia, goerli } from "wagmi/chains";
+import { mainnet, goerli } from "wagmi/chains";
 
 const chainss : Chain[] = [mainnet, goerli];
 
@@ -34,8 +31,6 @@ const connectors = connectorsForWallets([
     groupName: "Other",
     wallets: [
       argentWallet({ projectId, chains }),
-      trustWallet({ projectId, chains }),
-      ledgerWallet({ projectId, chains }),
     ],
   },
 ]);
@@ -48,14 +43,10 @@ const wagmiConfig = createConfig({
 });
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => setMounted(true), []);
-
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
-        {mounted && children}
+        {children}
       </RainbowKitProvider>
     </WagmiConfig>
   );
