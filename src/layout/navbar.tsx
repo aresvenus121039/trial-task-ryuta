@@ -16,6 +16,7 @@ const Navbar: React.FC = () => {
       const data = await getServerSession();
       setSession(data)
     }
+    temp();
   },[])
   return (
     <>
