@@ -42,8 +42,6 @@ export default function LoginForm() {
   });
 
   const onSubmit = async (data: FormData) => {
-    console.log("Submitting form", data);
-
     const { email, password } = data;
 
     try {
@@ -52,7 +50,6 @@ export default function LoginForm() {
         password,
         redirect: false,
       });
-      console.log({ response });
       if (!response?.error) {
         router.push("/");
         router.refresh();

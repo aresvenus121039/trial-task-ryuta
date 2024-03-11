@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -18,29 +19,33 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 
 const FormSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
+  email: z.string().min(1, {
+    message: "Email must be at least 1 characters.",
+  })
+  .email("This is not a valid email."),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
+  }),
+  address: z.string().min(1, {
+    message: "Address must be empty",
   }),
 });
 
 type FormData = z.infer<typeof FormSchema>;
 
 export default function FormPage() {
+  const router = useRouter();
   const form = useForm({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
+      address: ""
     },
   });
 
   const onSubmit = async (data: FormData) => {
-    console.log("Submitting form", data);
-
-    const { username: email, password } = data;
+    const { email, password, address } = data;
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -48,14 +53,19 @@ export default function FormPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, address }),
       });
+      
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
       // Process response here
-      console.log("Registration Successful", response);
-      toast({ title: "Registration Successful" });
+      const data = await response.json();
+      if(data.state == 1){
+        console.log("Registration Successful",);
+        toast({ title: "Registration Successful" });
+        router.push("/login");
+      }
     } catch (error: any) {
       console.error("Registration Failed:", error);
       toast({ title: "Registration Failed", description: error.message });
@@ -67,12 +77,12 @@ export default function FormPage() {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
-          name="username"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Username" {...field} />
+                <Input placeholder="Email" {...field} />
               </FormControl>
               <FormDescription>
                 This is your public display name.
@@ -92,7 +102,22 @@ export default function FormPage() {
             </FormItem>
           )}
         />
-          <Button type="submit">Submit</Button>
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl>
+                <Input placeholder="Address" {...field} />
+              </FormControl>
+              <FormDescription>
+                This is your address.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Submit</Button>
       </form>
     </Form>
   );
