@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import WalletProvider from '../context/WalletProvider';
+import ApolloClientProvider from '../context/ApolloProvider';
 import './globals.css'
 import "@rainbow-me/rainbowkit/styles.css";
 import Navbar from '@/layout/navbar';
@@ -20,10 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <WalletProvider>
-          <Navbar />
-          {children}
-        </WalletProvider>
+        <ApolloClientProvider>
+          <WalletProvider>
+            <Navbar />
+            {children}
+          </WalletProvider>
+        </ApolloClientProvider>
       </body>
     </html>
   )
