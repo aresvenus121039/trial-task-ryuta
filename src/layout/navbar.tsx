@@ -4,12 +4,19 @@ import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { getServerSession } from "next-auth";
 import { signOut } from "next-auth/react";
+import { useAmp } from "next/amp";
 
-const Navbar: React.FC = async () => {
-  const session = await getServerSession(); 
+const Navbar: React.FC = () => {
   const onLogout = () => {
     signOut()
   }
+  const [session, setSession] = React.useState<any>()
+  React.useEffect(() => {
+    const temp = async () => {
+      const data = await getServerSession();
+      setSession(data)
+    }
+  },[])
   return (
     <>
       {
