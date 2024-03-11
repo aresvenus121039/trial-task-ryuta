@@ -13,20 +13,15 @@ import {
 } from "@/components/ui/table"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
+interface TokenDayDataItem {
+  priceUSD: string
+}
 interface Item {
   id: string;
   symbol: string;
-  decimals: string;
-  volume: string;
+  tokenDayData: Array<TokenDayDataItem>;
+  volumeUSD: string;
 }
-
-const generateDatas = (num: number) => 
-  Array(num).fill(0).map((item, id) => ({
-    id: `id -> ${id}`,
-    symbol: `symbol -> ${id}`,
-    decimals: `decimals -> ${id}`,
-    volume: `volume -> ${id}`
-  }))
 
 export default function Tokens() {
   const [ tokenDatas, setTokenDatas ] = useState<Item[]>([]);
