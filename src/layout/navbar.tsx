@@ -16,6 +16,16 @@ const Navbar: React.FC = () => {
           </Link>
         </li>
         <li className="mt-2 ml-5">
+          <Link href="/login" className="text-black ">
+            Login
+          </Link>
+        </li>
+        <li className="mt-2 ml-5">
+          <Link href="/register" className="text-black ">
+            Register
+          </Link>
+        </li>
+        <li className="mt-2 ml-5">
           <Link href="/tokens" className="text-black ">
             Tokens
           </Link>
