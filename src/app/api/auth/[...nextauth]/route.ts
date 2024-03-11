@@ -33,7 +33,7 @@ const handler = NextAuth({
             user[0].password
           );
         
-        if (passwordCorrect) {
+        if (user && passwordCorrect) {
             return {
                 id: user[0].user_id,
                 email: user[0].email,
