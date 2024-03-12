@@ -1,12 +1,20 @@
-"use client"
+// "use client"
 // import React from 'react';
 // import { ethers } from 'ethers';
-// import { useAccount, useBalance } from 'wagmi';
+// import { useAccount, useBalance  } from 'wagmi';
 
 // import useSwap from '../../hooks/useSwap';
 // import { Input } from '@/components/ui/input';
 // import { Button } from '@/components/ui/button';
 // import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+// interface TokenType {
+//   name: string;
+//   symbol: string;
+//   balance: string;
+//   address: string;
+//   logo?: string;
+// }
 
 // const Swap = () => {
 //   const [amount, setAmount] = React.useState(0);
@@ -49,6 +57,7 @@
 //   };
 
 //   const onClickSwapButton = async () => {
+
 //     try {
 //       setIsLoading(true);
 //       const txn = await swap(amount);
@@ -203,10 +212,17 @@
 
 // export default Swap;
 
-export default function Swap(){
+// // export default function Swap(){
+// //   return (
+// //     <>
+    
+// //     </>
+// //   )
+// // }
+
+export default function swap() {
   return (
     <>
-    
     </>
   )
 }

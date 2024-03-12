@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatNumber, formatWithCommas } from "@/lib/format"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 interface TokenDayDataItem {
@@ -147,8 +148,8 @@ export default function Tokens() {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{id + 1}</TableCell>
                   <TableCell>{item.symbol}</TableCell>
-                  <TableCell>{item.tokenDayData[0].priceUSD.split(".")[0]}</TableCell>
-                  <TableCell className="text-right">{item.volumeUSD.split(".")[0]}</TableCell>
+                  <TableCell>${formatWithCommas(Number(item.tokenDayData[0].priceUSD), 2)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(Number(item.volumeUSD), 0)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

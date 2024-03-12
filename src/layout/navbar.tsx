@@ -25,7 +25,7 @@ const Navbar: React.FC = () => {
                 </Link>
               </li>
               <li className="mt-2 ml-5">
-                <Link href="/swap" className="text-black ">
+                <Link href="/uniswap" className="text-black ">
                   Swap
                 </Link>
               </li>
