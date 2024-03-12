@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import WalletProvider from '../context/WalletProvider';
 import ApolloClientProvider from '../context/ApolloProvider';
+import SessionWrapper from '@/context/SessionWrapper';
 import './globals.css'
 import "@rainbow-me/rainbowkit/styles.css";
 import Navbar from '@/layout/navbar';
@@ -19,15 +20,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <ApolloClientProvider>
-          <WalletProvider>
-            <Navbar />
-            {children}
-          </WalletProvider>
-        </ApolloClientProvider>
-      </body>
-    </html>
+    <SessionWrapper>
+      <html lang="en">
+        <body className={inter.className}>
+          <ApolloClientProvider>
+            <WalletProvider>
+              <Navbar />
+              {children}
+            </WalletProvider>
+          </ApolloClientProvider>
+        </body>
+      </html>
+    </SessionWrapper>
   )
 }

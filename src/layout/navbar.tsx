@@ -2,21 +2,14 @@
 import React from "react";
 import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { getServerSession } from "next-auth";
+import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 
 const Navbar: React.FC = () => {
   const onLogout = () => {
     signOut()
   }
-  const [session, setSession] = React.useState<any>()
-  // React.useEffect(() => {
-  //   const temp = async () => {
-  //     const data = await getServerSession();
-  //     setSession(data)
-  //   }
-  //   temp();
-  // },[])
+  const { data: session } = useSession()
   return (
     <>
       {
@@ -29,16 +22,6 @@ const Navbar: React.FC = () => {
               <li className="mt-2">
                 <Link href="#" className="text-black " onClick={() => onLogout()}>
                   Logout
-                </Link>
-              </li>
-              <li className="mt-2 ml-5">
-                <Link href="/swap" className="text-black ">
-                  Swap
-                </Link>
-              </li>
-              <li className="mt-2 ml-5">
-                <Link href="/tokens" className="text-black ">
-                  Tokens
                 </Link>
               </li>
               <li className="ml-5">
@@ -61,19 +44,6 @@ const Navbar: React.FC = () => {
                 <Link href="/register" className="text-black ">
                   Register
                 </Link>
-              </li>
-              <li className="mt-2 ml-5">
-                <Link href="/swap" className="text-black ">
-                  Swap
-                </Link>
-              </li>
-              <li className="mt-2 ml-5">
-                <Link href="/tokens" className="text-black ">
-                  Tokens
-                </Link>
-              </li>
-              <li className="ml-5">
-                <ConnectButton />
               </li>
             </ul>
           </nav>
