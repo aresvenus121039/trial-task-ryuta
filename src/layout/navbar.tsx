@@ -55,9 +55,6 @@ const Navbar: React.FC = () => {
                   Register
                 </Link>
               </li>
-              <li className="ml-5">
-                <ConnectButton />
-              </li>
             </ul>
           </nav>
         )
