@@ -24,6 +24,16 @@ const Navbar: React.FC = () => {
                   Logout
                 </Link>
               </li>
+              <li className="mt-2 ml-5">
+                <Link href="/swap" className="text-black ">
+                  Swap
+                </Link>
+              </li>
+              <li className="mt-2 ml-5">
+                <Link href="/tokens" className="text-black ">
+                  Tokens
+                </Link>
+              </li>
               <li className="ml-5">
                 <ConnectButton />
               </li>
@@ -44,6 +54,9 @@ const Navbar: React.FC = () => {
                 <Link href="/register" className="text-black ">
                   Register
                 </Link>
+              </li>
+              <li className="ml-5">
+                <ConnectButton />
               </li>
             </ul>
           </nav>

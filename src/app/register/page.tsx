@@ -1,11 +1,10 @@
-"use client"
+import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import FormPage from "./form";
-import { useSession } from "next-auth/react";
 
-export default function RegisterPage() {
-  const { data: session } = useSession();
+export default async function RegisterPage() {
+  const session = await getServerSession();
 
   if (session) {
     redirect("/");
