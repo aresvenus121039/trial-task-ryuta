@@ -69,10 +69,11 @@
 .lds-roller {
   display: inline-block;
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   width: 80px;
   height: 80px;
+  z-index: 100;
 }
 .lds-roller div {
   animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
@@ -169,3 +170,12 @@ input:focus{
   outline: none;
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------*/
+
+/*------------------------------modal-----------------*/
+.modal {
+  transition: opacity 0.25s ease;
+}
+body.modal-active {
+  overflow-x: hidden;
+  overflow-y: visible !important;
+}

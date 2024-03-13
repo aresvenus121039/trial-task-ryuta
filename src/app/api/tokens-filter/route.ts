@@ -4,7 +4,7 @@ import axios from "axios";
 import { NextResponse, NextRequest } from "next/server";
 
 export const POST = async (req: NextRequest, res: NextResponse) => {
-    const { amount, name } = await req.json();    
+    const { name } = await req.json();    
     try {
         const data = await axios({
             url: "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
