@@ -20,7 +20,7 @@ export const POST = async (req: NextRequest, res: NextResponse) => {
                     id
                     volume
                     volumeUSD
-                    tokenDayData(first: 1, orderBy: priceUSD, orderDirection: desc) {
+                    tokenDayData(first: 2, orderBy: date, orderDirection: desc) {
                       priceUSD
                       volume
                       high
@@ -28,6 +28,7 @@ export const POST = async (req: NextRequest, res: NextResponse) => {
                       date
                       open
                     }
+                    totalSupply
                   }
                 
               }

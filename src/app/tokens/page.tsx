@@ -11,17 +11,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatNumber, formatWithCommas } from "@/lib/format"
+import { formatNumber, formatWithCommas, updowncheck } from "@/lib/format"
+import Image from "next/image"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 interface TokenDayDataItem {
-  priceUSD: string
+  priceUSD: string,
+  high: string,
 }
 interface Item {
   id: string;
   symbol: string;
   tokenDayData: Array<TokenDayDataItem>;
   volumeUSD: string;
+  totalSupply: string;
 }
 
 export default function Tokens() {
@@ -140,6 +143,9 @@ export default function Tokens() {
                 <TableHead className="w-[100px]">No</TableHead>
                 <TableHead>Token Name</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>1 day</TableHead>
+                <TableHead>1 hour</TableHead>
+                <TableHead>FDV</TableHead>
                 <TableHead className="text-right">Volume</TableHead>
               </TableRow>
             </TableHeader>
@@ -149,6 +155,31 @@ export default function Tokens() {
                   <TableCell className="font-medium">{id + 1}</TableCell>
                   <TableCell>{item.symbol}</TableCell>
                   <TableCell>${formatWithCommas(Number(item.tokenDayData[0].priceUSD), 2)}</TableCell>
+                  <TableCell className={`${updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[0] ? 'text-teal-400' : 'text-rose-600'}`}>
+                    <div className="flex gap-2">
+                    {
+                      updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[0] ? (
+                        <Image src={"/up.svg"} width={16} height={16} alt="up" />
+                      ) : (
+                        <Image src={"/down.svg"} width={16} height={16} alt="down" />
+                      )
+                    }
+                    {updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[1]}%
+                    </div>
+                  </TableCell>
+                  <TableCell className={`${updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[0] ? 'text-teal-400' : 'text-rose-600'}`}>
+                    <div className="flex gap-2">
+                    {
+                      updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[0] ? (
+                        <Image src={"/up.svg"} width={16} height={16} alt="up" />
+                      ) : (
+                        <Image src={"/down.svg"} width={16} height={16} alt="down" />
+                      )
+                    }
+                    {updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[1]}%
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatNumber(Number(item.totalSupply) * Number(item.tokenDayData[0].priceUSD), 0)}</TableCell>
                   <TableCell className="text-right">{formatNumber(Number(item.volumeUSD), 0)}</TableCell>
                 </TableRow>
               ))}

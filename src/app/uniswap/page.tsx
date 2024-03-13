@@ -141,7 +141,7 @@ const Swap = () => {
           </div>
         </div>
 
-        <div className="p-[16px] bg-[#f9f9f9] rounded-[16px] w-[90%] pb-9 relative" style={{border:'1px solid #e9e6e6'}}>
+        <div className="p-[16px] bg-[#f9f9f9] rounded-[16px] w-[90%] relative" style={{border:'1px solid #e9e6e6'}}>
           <div>
             <div className="font-[485] tex-sm text-[#7d7d7d] tracking-[-0.01]"> You received </div>
               <div className="flex justify-between">
@@ -165,6 +165,7 @@ const Swap = () => {
                   </div>
                 </div>
               </div>
+              <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {ToTokenBalance?.formatted}</div>
           </div>
           <div className="absolute top-[-17px] left-[50%] bg-white p-1">
             <div className="w-[25px] h-[25px] flex justify-center items-center bg-[#f9f9f9]">

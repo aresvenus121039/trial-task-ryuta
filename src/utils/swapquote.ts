@@ -12,7 +12,7 @@ import { BigNumber } from '@ethersproject/bignumber';
 import ERC20_abi from "./ERC20_abi.json"
 
 export const initpoolforswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, chainId: number, inAmountStr: string) => {
-    const { API_URL, PRIVATE_KEY } = process.env;
+    // const { API_URL, PRIVATE_KEY } = process.env;
 // const provider = new ethers.providers.JsonRpcProvider(API_URL, chainId);
 
 // const signer = new ethers.Wallet(PRIVATE_KEY!, provider);
