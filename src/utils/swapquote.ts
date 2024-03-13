@@ -21,6 +21,9 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     const accounts = await ethereum.request({
         method: "eth_requestAccounts",
     });
+    const test = await ethereum.request({
+      method: "eth_chainId",
+  });
     const provider = new ethers.providers.Web3Provider(ethereum);
     const walletAddress = accounts[0];
     const signer = provider.getSigner(walletAddress);
@@ -49,7 +52,6 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     console.log(`   Output: ${tokenOut.symbol} (${tokenOut.name}): ${ethers.utils.formatUnits(balanceTokenOut, tokenOut.decimals)}`);
     console.log("");
 
-    // ============= PART 2 --- get Uniswap pool for pair TokenIn-TokenOut
     console.log("Loading pool information...");
 
     const UNISWAP_FACTORY_ADDRESS = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
@@ -120,7 +122,6 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     console.log('');
 
 
-    // ============= PART 3 --- Giving a quote for user input
     console.log("Loading up quote for a swap...");
 
     const amountIn = ethers.utils.parseUnits(inAmountStr, tokenIn.decimals);
@@ -142,7 +143,7 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     console.log('');
 
 
-    // ============= PART 4 --- Loading a swap route
+    // =============
     console.log('');
     console.log("Loading a swap route...");
 

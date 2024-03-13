@@ -7,7 +7,7 @@ export const POST = async (req: NextRequest, res: NextResponse) => {
   const { amount } = await req.json();    
   try {
     const data = await axios({
-      url: "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
+      url: "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-gorli",
       method: "post",
       data: {
           query: `

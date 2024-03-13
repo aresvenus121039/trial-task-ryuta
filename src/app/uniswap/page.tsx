@@ -43,14 +43,16 @@ const Swap = () => {
   const { address } = useAccount();
   const { data: FromTokenBalance } = useBalance({
     address: address,
-    token: fromToken as `0x${string}`,
+    // token: fromToken as `0x${string}`,
     watch: true
   });
   const { data: ToTokenBalance } = useBalance({
     address: address,
-    token: toToken as `0x${string}`,
+    // token: toToken as `0x${string}`,
     watch: true
   });
+
+  const chain_id = useChainId()
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -62,7 +64,7 @@ const Swap = () => {
         };
         const response = await fetch('/api/tokens-filter', requestOptions);
         const data = await response.json()
-        setFromToken(data.data[0].id)
+        // setFromToken(data.data[0].id)
 
         const requestOptionss = {
           method: 'POST',
@@ -94,8 +96,8 @@ const Swap = () => {
   };
 
   const onClickSwapButton = async () => {
-    setShowModal(true);
-    // const [balancein, balanceout] = await initpoolforswap("0x1c8d43b8d85cc0d2ca2ccd3ea04d45c60be48622", "0x065a049b5be75e4f1d29a03c6edb5acc1a4e3b93", chain_id, '0.2')
+    // setShowModal(true);
+     const [balancein, balanceout] = await initpoolforswap("0x1c8d43b8d85cc0d2ca2ccd3ea04d45c60be48622", "0x065a049b5be75e4f1d29a03c6edb5acc1a4e3b93", chain_id, '0.2')
     // console.log("123",balancein, balanceout);
   };
 
