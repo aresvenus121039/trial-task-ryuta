@@ -1,13 +1,14 @@
-// This endpoint begins the authorisation flow.
+// This endpoint begins the authorisation flow.   /https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3
 // It redirects the user to gmail APIs to extract the authorisation code.
 import axios from "axios";
 import { NextResponse, NextRequest } from "next/server";
+import { CHAIN_SUBGRAPH_URL_NOT_TEST } from '@/lib/constants';
 
 export const POST = async (req: NextRequest, res: NextResponse) => {
-    const { amount, name } = await req.json();    
+    const { amount, name, chainId } = await req.json();    
     try {
         const data = await axios({
-            url: "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
+            url: CHAIN_SUBGRAPH_URL_NOT_TEST[chainId] ?? CHAIN_SUBGRAPH_URL_NOT_TEST[1],
             method: "post",
             data: {
                 query: `

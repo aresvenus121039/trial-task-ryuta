@@ -8,7 +8,6 @@ import { AlphaRouter } from '@uniswap/smart-order-router'
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json'
 import { BigNumber } from '@ethersproject/bignumber';
-import { usePublicClient } from 'wagmi';
 
 import ERC20_abi from "./abis/ERC20_abi.json"
 import ERC721_abi from "./abis/ERC721_abi.json"
@@ -18,6 +17,9 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
     const ethereum = (window as any).ethereum;
     const accounts = await ethereum.request({
         method: "eth_requestAccounts",
+    });
+    const test = await ethereum.request({
+      method: "eth_chainId",
     });
     const provider = new ethers.providers.Web3Provider(ethereum);
     const walletAddress = accounts[0];
@@ -39,9 +41,10 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
         return [new Token(chainId, contract.address, dec, symbol, name), balance];
     }
 
-
     const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
     const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
+
+    // return [balanceTokenIn, balanceTokenOut];
 
     console.log(`Wallet ${walletAddress} balances:`);
     console.log(`   Input: ${tokenIn.symbol} (${tokenIn.name}): ${ethers.utils.formatUnits(balanceTokenIn, tokenIn.decimals)}`);

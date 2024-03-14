@@ -10,7 +10,10 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
+import NATIVE_TOKENS from "@/utils/native_tokens.json";
+import gql from 'graphql-tag';
+import { useQuery } from '@apollo/client';
 
 interface RouteType {
   quoteGasAdjusted? : any;
@@ -25,6 +28,17 @@ interface TokenType {
   symbol: string;
   logo?: string;
 }
+
+const TOKENLISTS_QUERY = gql`
+    query GET($amount: Int!) {
+      tokens(orderBy: volumeUSD, orderDirection: desc, first: $amount) {
+        decimals
+        name
+        symbol
+        id
+      }
+    }
+`
 
 const Swap = () => {
   const [amount, setAmount] = React.useState(0);
@@ -58,42 +72,30 @@ const Swap = () => {
   const { address } = useAccount();
   const { data: FromTokenBalance } = useBalance({
     address: address,
-    // token: fromToken as `0x${string}`,
+    token: fromToken as `0x${string}`,
     watch: true
   });
   const { data: ToTokenBalance } = useBalance({
     address: address,
-    // token: toToken as `0x${string}`,
+    token: toToken as `0x${string}`,
     watch: true
   });
 
   const chain_id = useChainId()
 
-  React.useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true)
-        const requestOptions = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: FromTokenBalance?.symbol })
-        };
-        const response = await fetch('/api/tokens-filter', requestOptions);
-        const data = await response.json()
-        // setFromToken(data.data[0].id)
-
-        const requestOptionss = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: 10 })
-        };
-        const res = await fetch('/api/tokenlists', requestOptionss);
-        const datalist = await res.json();
-        
-        setTokenlist(datalist.data)
-        setIsLoading(false);
+  const {
+    loading,
+    data: data
+  } = useQuery(TOKENLISTS_QUERY, {
+    variables: {
+      amount: 10
     }
-    fetchData()
-  },[])
+  })
+  React.useEffect(() => {
+    setIsLoading(loading)
+    console.log("data: ",data);
+    
+  },[loading])
     
   const onChangeAmountInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if(!fromToken || !toToken){
@@ -111,16 +113,8 @@ const Swap = () => {
   };
 
   const onClickSwapButton = async () => {
-    // setShowModal(true);
-     const [
-      contractIn,
-      contractOut,
-      signer,
-      provider,
-      route,
-    ] = await initswap(fromToken, toToken, chain_id, amount)
-
     if(step == 0){
+      // await initswap(fromToken, toToken, chain_id, 0.8) //test
       const [
         contractIn,
         contractOut,
@@ -181,7 +175,6 @@ const Swap = () => {
                   <div className="bg-white rounded-3xl flex min-w-[80px] h-[32px]" style={{border: "1px solid #e9e6e6"}}>
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
                        setShowModal(true);
-                      console.log(FromTokenBalance, fromToken);
                       setSelectModal(1);
                     }}>{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}<span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
@@ -189,7 +182,7 @@ const Swap = () => {
                   </div>
                 </div>
               </div>
-            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {fromBalance}</div>
+            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {FromTokenBalance?.formatted}</div>
             <p className="text-xs ml-1.5 mt-1 text-red-500" hidden={!isExceedBalance}>
               The amount entered exceeds the available balance.
             </p>
@@ -224,7 +217,7 @@ const Swap = () => {
           </div>
           <div className="absolute top-[-17px] left-[50%] bg-white p-1">
             <div className="w-[25px] h-[25px] flex justify-center items-center bg-[#f9f9f9]">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222222" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
             </div>
           </div>
         </div>
@@ -319,9 +312,27 @@ const Swap = () => {
                 </div>
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
+                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={() => {
+                      if(selectModal == 2){
+                        setToToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
+                        setToTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken);
+                      }else if(selectModal == 1){
+                        setFromToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
+                        setFromTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken)
+                      }
+                      setShowModal(false);
+                    }}>
+                      <div className="flex items-center">
+                        <div className="rounded-[100px] bg-[#5fd0f3] h-[36px] w-[36px] text-[12px] justify-center flex items-center">{'ETH'}</div>
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="text-ellipsis">{NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken}</div>
+                        <div className="font-[485] text-xs text-[#7d7d7d]">{NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken}</div>
+                      </div>
+                    </div>
                   {
-                    tokenlists && tokenlists.map((item, id) => (
-                      <div key={id} className="flex gap-3 mt-3" onClick={() => {
+                    data.tokens && data.tokens.map((item: TokenType, id: number) => (
+                      <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={() => {
                         if(selectModal == 2){
                           setToToken(item.id);
                           setToTokenSymbolTemp(item.symbol);

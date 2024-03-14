@@ -12,6 +12,7 @@ import {
 import { formatNumber, formatWithCommas, updowncheck } from "@/lib/format"
 import Image from "next/image"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useChainId  } from 'wagmi';
 
 interface TokenDayDataItem {
   priceUSD: string,
@@ -28,10 +29,14 @@ interface Item {
 export default function Tokens() {
   const [ tokenDatas, setTokenDatas ] = useState<Item[]>([]);
   const tableEl = useRef<HTMLDivElement>(null);
+  const tableHead = useRef<HTMLTableSectionElement>(null);
   const [distanceBottom, setDistanceBottom] = useState(0);
   const [hasMore] = useState(true);
   const [filterName, setFilterName] = useState<string>("");
   const [isLoadings, setIsLoadings] = useState<Boolean>(false);
+  const [showItem, setShowItem] = useState<Boolean>(false);
+
+  const chainId = useChainId();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +44,7 @@ export default function Tokens() {
       const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 50, name: filterName })
+        body: JSON.stringify({ amount: 50, name: filterName, chainId: chainId })
       };
       const response = await fetch('/api/tokens', requestOptions);
       const data = await response.json();
@@ -59,7 +64,7 @@ export default function Tokens() {
           const requestOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: amount, name: filterName })
+            body: JSON.stringify({ amount: amount, name: filterName, chainId: chainId })
           };
           const response = await fetch('/api/tokens', requestOptions);
           const data = await response.json();
@@ -75,7 +80,11 @@ export default function Tokens() {
   }, [tokenDatas]);
 
   const scrollListener = useCallback(() => {
-    if (tableEl.current) {
+    if (tableEl.current) {      
+      if (tableEl.current.scrollTop > 200) 
+        setShowItem(true);
+      else 
+        setShowItem(false);
       let bottom = tableEl.current.scrollHeight - tableEl.current.clientHeight;
 
       if (!distanceBottom) {
@@ -110,7 +119,7 @@ export default function Tokens() {
       const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 50, name: filterName })
+        body: JSON.stringify({ amount: 50, name: filterName, chainId: chainId })
       };
       const res = await fetch('/api/tokens', options);
       const dataa = await res.json();
@@ -121,7 +130,7 @@ export default function Tokens() {
     const requestOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: filterName })
+      body: JSON.stringify({ name: filterName, chainId: chainId })
     };
     const response = await fetch('/api/tokens-filter', requestOptions);
     const data = await response.json();
@@ -143,7 +152,7 @@ export default function Tokens() {
         <div className="flex justify-center">
           <div className="w-full mt-3 overflow-y-scroll border-2 border-slate-100" style={{ maxHeight: '600px', maxWidth: '80%'}} ref={tableEl}>
             <Table className="relative">
-              <TableHeader className="sticky top-0">
+              <TableHeader className="sticky top-0" ref={tableHead}>
                 <TableRow>
                   <TableHead className="w-[100px]">No</TableHead>
                   <TableHead>Token Name</TableHead>
@@ -184,12 +193,22 @@ export default function Tokens() {
                       {updowncheck(item.tokenDayData[0].high, item.tokenDayData[1].high)[1]}%
                       </div>
                     </TableCell>
-                    <TableCell>{formatNumber(Number(item.totalSupply) * Number(item.tokenDayData[0].priceUSD), 0)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(Number(item.volumeUSD), 0)}</TableCell>
+                    <TableCell>${formatNumber(Number(item.totalSupply) * Number(item.tokenDayData[0].priceUSD), 0)}</TableCell>
+                    <TableCell className="text-right">${formatNumber(Number(item.volumeUSD), 0)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {
+              showItem && (
+                <button onClick={() => {
+                  tableHead?.current?.scrollIntoView(false)
+                }} className="absolute top-[150px] flex gap-3 rounded-[900px] text-[16px] bg-[#ffefff] text-[#fc72ff] p-[16px] justify-center items-center left-[50%]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="styled__ReturnIcon-sc-bcb71631-4 ibibBM"><polyline points="14 9 9 4 4 9"></polyline><path d="M20 20h-7a4 4 0 0 1-4-4V4"></path></svg>
+                  Return to top
+                </button>
+              )
+            }
           </div>
         </div>
       </div>

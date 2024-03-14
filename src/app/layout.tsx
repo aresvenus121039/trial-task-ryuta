@@ -23,12 +23,12 @@ export default function RootLayout({
     <SessionWrapper>
       <html lang="en">
         <body className={inter.className}>
-          <ApolloClientProvider>
-            <WalletProvider>
+          <WalletProvider>
+            <ApolloClientProvider>
               <Navbar />
               {children}
-            </WalletProvider>
-          </ApolloClientProvider>
+            </ApolloClientProvider>
+          </WalletProvider>
         </body>
       </html>
     </SessionWrapper>

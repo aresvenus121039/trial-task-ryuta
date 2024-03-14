@@ -4,8 +4,8 @@ import { Token } from '@uniswap/sdk-core'
 import Quoter from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
 import IUniswapV3PoolABI from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import {
-  POOL_FACTORY_CONTRACT_ADDRESS,
-  QUOTER_CONTRACT_ADDRESS,
+  MGAOP_POOL_FACTORY_CONTRACT_ADDRESS,
+  MGAOP_QUOTER_CONTRACT_ADDRESS,
 } from '../lib/constants'
 import { toReadableAmount, fromReadableAmount } from '../lib/conversion'
 
@@ -15,7 +15,7 @@ function getProvider(): providers.Provider {
 
 export async function quotes(amountIn: number, decimalsIn: number, decimalsOut: number, tokenIn: Token, tokenOut: Token): Promise<string> {
   const quoterContract = new ethers.Contract(
-    QUOTER_CONTRACT_ADDRESS,
+    MGAOP_QUOTER_CONTRACT_ADDRESS,
     Quoter.abi,
     getProvider()
   )
@@ -41,7 +41,7 @@ async function getPoolConstants(tokenIn: Token, tokenOut: Token): Promise<{
   fee: number
 }> {
   const currentPoolAddress = computePoolAddress({
-    factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS,
+    factoryAddress: MGAOP_POOL_FACTORY_CONTRACT_ADDRESS,
     tokenA: tokenIn,
     tokenB: tokenOut,
     fee: FeeAmount.MEDIUM,

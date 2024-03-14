@@ -2,15 +2,18 @@
 
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/react-hooks';
-
-const apolloClient = new ApolloClient({
-  link: new HttpLink({
-    uri: 'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-gorli'
-  }),
-  cache: new InMemoryCache()
-});
+import { useChainId  } from 'wagmi';
+import { CHAIN_SUBGRAPH_URL } from '@/lib/constants';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const chainId = useChainId();
+  const apolloClient = new ApolloClient({
+    link: new HttpLink({
+      uri: CHAIN_SUBGRAPH_URL[chainId]
+    }),
+    cache: new InMemoryCache()
+  });
+
   return (
     <ApolloProvider client={apolloClient}>
       {children}
