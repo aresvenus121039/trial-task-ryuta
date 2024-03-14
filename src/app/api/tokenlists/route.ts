@@ -1,4 +1,4 @@
-// This endpoint begins the authorisation flow.
+// This endpoint begins the authorisation flow. https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-gorli
 // It redirects the user to gmail APIs to extract the authorisation code.
 import axios from "axios";
 import { NextResponse, NextRequest } from "next/server";
@@ -7,7 +7,7 @@ export const POST = async (req: NextRequest, res: NextResponse) => {
   const { amount } = await req.json();    
   try {
     const data = await axios({
-      url: "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-gorli",
+      url: "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
       method: "post",
       data: {
           query: `

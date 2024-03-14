@@ -12,11 +12,7 @@ import { BigNumber } from '@ethersproject/bignumber';
 import ERC20_abi from "./ERC20_abi.json"
 import ERC721_abi from "./ERC721_abi.json"
 
-export const initpoolforswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, chainId: number, inAmountStr: string) => {
-    // const { API_URL, PRIVATE_KEY } = process.env;
-// const provider = new ethers.providers.JsonRpcProvider(API_URL, chainId);
-
-// const signer = new ethers.Wallet(PRIVATE_KEY!, provider);
+export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, chainId: number, inAmountStr: any) => {
 
     const ethereum = (window as any).ethereum;
     const accounts = await ethereum.request({
@@ -30,8 +26,8 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     const signer = provider.getSigner(walletAddress);
 
     // create token contracts and related objects
-    const contractIn = new ethers.Contract(tokenInContractAddress, ERC721_abi, signer);
-    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC721_abi, signer);
+    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, signer);
+    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, signer);
 
     const getTokenAndBalance = async function (contract: ethers.Contract) {
         var [dec, symbol, name, balance] = await Promise.all(
@@ -189,71 +185,78 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     console.log(`   Gas Price Wei: ${route.gasPriceWei}`);
     console.log('');
 
-    // // ============= PART 5 --- Making actual swap
-    console.log("Approving amount to spend...");
+    return [
+      contractIn,
+      contractOut,
+      signer,
+      provider,
+      route,
+      balanceTokenIn,
+      balanceTokenOut
+    ];
+  }
+
+export const approveForSwap = async (contractIn: any, contractOut: any,walletAddress: any, chainId: any, amountIn: any, provider: any, signer: any) => {
 
     // address of a swap router
-    const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
+  const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
 
-    // For Metamask it will be just "await contractIn.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);"
+  // For Metamask it will be just "await contractIn.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);"
 
-    // here we just create a transaction object (not sending it to blockchain).
-    const approveTxUnsigned = await contractIn.populateTransaction.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
-    // by default chainid is not set https://ethereum.stackexchange.com/questions/94412/valueerror-code-32000-message-only-replay-protected-eip-155-transac
-    approveTxUnsigned.chainId = chainId;
-    // estimate gas required to make approve call (not sending it to blockchain either)
-    approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
-    // suggested gas price (increase if you want faster execution)
-    approveTxUnsigned.gasPrice = await provider.getGasPrice();
-    // nonce is the same as number previous transactions
-    approveTxUnsigned.nonce = await provider.getTransactionCount(walletAddress);
+  // here we just create a transaction object (not sending it to blockchain).
+  const approveTxUnsigned = await contractIn.populateTransaction.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
+  // by default chainid is not set https://ethereum.stackexchange.com/questions/94412/valueerror-code-32000-message-only-replay-protected-eip-155-transac
+  approveTxUnsigned.chainId = chainId;
+  // estimate gas required to make approve call (not sending it to blockchain either)
+  approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
+  // suggested gas price (increase if you want faster execution)
+  approveTxUnsigned.gasPrice = await provider.getGasPrice();
+  // nonce is the same as number previous transactions
+  approveTxUnsigned.nonce = await provider.getTransactionCount(walletAddress);
 
-    // sign transaction by our signer
-    const approveTxSigned = await signer.signTransaction(approveTxUnsigned);
-    // submit transaction to blockchain
-    const submittedTx = await provider.sendTransaction(approveTxSigned);
-    // wait till transaction completes
-    const approveReceipt = await submittedTx.wait();
-    if (approveReceipt.status === 0)
-        throw new Error("Approve transaction failed");
+  // sign transaction by our signer
+  const approveTxSigned = await signer.signTransaction(approveTxUnsigned);
+  // submit transaction to blockchain
+  const submittedTx = await provider.sendTransaction(approveTxSigned);
+  // wait till transaction completes
+  const approveReceipt = await submittedTx.wait();
+  if (approveReceipt.status === 0)
+      throw new Error("Approve transaction failed");
 
-    return [
-      walletAddress,
-      route,
-      signer,
-      contractIn,
-      contractOut
-    ]
+  return [
+    signer,
+    contractIn,
+    contractOut
+  ]
 }
 
-
-export const makeswap = async (walletAddress: string, route: any, signer: any, contractIn: any, contractOut: any) => {
+export const makeswap = async (walletAddress: any, route: any, signer: any, contractIn: any, contractOut: any) => {
   const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
   console.log("Making a swap...");
-    const value = BigNumber.from(route.methodParameters.value);
+  const value = BigNumber.from(route.methodParameters.value);
 
-    const transaction = {
-        data: route.methodParameters.calldata,
-        to: V3_SWAP_ROUTER_ADDRESS,
-        value: value,
-        from: walletAddress,
-        gasPrice: route.gasPriceWei,
+  const transaction = {
+      data: route.methodParameters.calldata,
+      to: V3_SWAP_ROUTER_ADDRESS,
+      value: value,
+      from: walletAddress,
+      gasPrice: route.gasPriceWei,
 
-        // route.estimatedGasUsed might be too low!
-        // most of swaps I tested fit into 300,000 but for some complex swaps this gas is not enough.
-        // Loot at etherscan/polygonscan past results.
-        gasLimit: BigNumber.from("800000")
-    };
+      // route.estimatedGasUsed might be too low!
+      // most of swaps I tested fit into 300,000 but for some complex swaps this gas is not enough.
+      // Loot at etherscan/polygonscan past results.
+      gasLimit: BigNumber.from("800000")
+  };
 
-    var tx = await signer.sendTransaction(transaction);
-    const receipt = await tx.wait();
-    if (receipt.status === 0) {
-        throw new Error("Swap transaction failed");
-    }
+  var tx = await signer.sendTransaction(transaction);
+  const receipt = await tx.wait();
+  if (receipt.status === 0) {
+      throw new Error("Swap transaction failed");
+  }
 
-    // ============= Final part --- printing results
-    const [newBalanceIn, newBalanceOut] = await Promise.all([
-        contractIn.balanceOf(walletAddress),
-        contractOut.balanceOf(walletAddress)
-    ]);
+  // ============= Final part --- printing results
+  const [newBalanceIn, newBalanceOut] = await Promise.all([
+      contractIn.balanceOf(walletAddress),
+      contractOut.balanceOf(walletAddress)
+  ]);
 }

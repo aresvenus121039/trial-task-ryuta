@@ -1,26 +1,30 @@
 "use client"
 import React from 'react';
-import { ethers } from 'ethers';
 import { useAccount, useBalance, useChainId  } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {Alchemy, Network} from "alchemy-sdk"
-import { initpoolforswap } from '@/utils/swapquote';
+import { initswap, approveForSwap, makeswap } from '@/utils/swapquote';
 import Image from 'next/image';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
+interface RouteType {
+  quoteGasAdjusted? : any;
+  estimatedGasUsedQuoteToken? : any;
+  estimatedGasUsedUSD? : any;
+  estimatedGasUsed? : any;
+  gasPriceWei? : any;
+}
 interface TokenType {
   id: string;
   name: string;
   symbol: string;
   logo?: string;
 }
-
-const config = {
-  apiKey: "lv9u9bsZ85gMYhfk3c9jyAIixErH-SoZ",
-  network: Network.ETH_MAINNET,
-};
-const alchemy = new Alchemy(config);
-
 
 const Swap = () => {
   const [amount, setAmount] = React.useState(0);
@@ -31,6 +35,8 @@ const Swap = () => {
   const [isInvalidToToken, setIsInvalidToToken] = React.useState(false);
   const [fromToken, setFromToken] = React.useState('');
   const [toToken, setToToken] = React.useState('');
+  const [fromBalance, setFromBalance] = React.useState(0);
+  const [toBalance, setToBalance] = React.useState(0);
   const [fromTokenAmount, setFromTokenAmount] = React.useState('');
   const [isOpenSuccess, setIsOpenSuccess] = React.useState(false);
   const [isOpenError, setIsOpenError] = React.useState(false);
@@ -39,6 +45,15 @@ const Swap = () => {
   const [selectModal, setSelectModal] = React.useState<number>(0)
   const [tokenlists , setTokenlist] = React.useState<TokenType[]>([])
   const [toTokenSymbolTemp, setToTokenSymbolTemp] = React.useState<string>('')
+  const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
+
+  const [fromContract, setFromContract] = React.useState()
+  const [toContract, setToContract] = React.useState()
+  const [signerr, setSignerr] = React.useState()
+  const [providerr, setProviderr] = React.useState()
+  const [routee, setRoutee] = React.useState<RouteType>({})
+  
+  const [step, setStep] = React.useState(0)
 
   const { address } = useAccount();
   const { data: FromTokenBalance } = useBalance({
@@ -73,7 +88,6 @@ const Swap = () => {
         };
         const res = await fetch('/api/tokenlists', requestOptionss);
         const datalist = await res.json();
-        console.log("here1",datalist.data);
         
         setTokenlist(datalist.data)
         setIsLoading(false);
@@ -82,23 +96,65 @@ const Swap = () => {
   },[])
     
   const onChangeAmountInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if(!fromToken || !toToken){
+      alert("First Choose 'From Token' and 'To Token'");
+      return;
+    }
     const amountIn = parseFloat(event.target.value || '0');
+    setAmount(amountIn);
     setFromTokenAmount(event.target.value || '');
     if (amountIn > parseFloat(FromTokenBalance?.formatted || '0')) {
       setIsExceedBalance(true);
     } else {
       setIsExceedBalance(false);
     }
-
-    setAmount(amountIn);
-    // const quote = await getQuote(amountIn);
-    setQuote(quote);
   };
 
   const onClickSwapButton = async () => {
     // setShowModal(true);
-     const [balancein, balanceout] = await initpoolforswap("0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb", "0x065a049b5be75e4f1d29a03c6edb5acc1a4e3b93", chain_id, '0.2')
-     console.log("123",balancein, balanceout);
+     const [
+      contractIn,
+      contractOut,
+      signer,
+      provider,
+      route,
+    ] = await initswap(fromToken, toToken, chain_id, amount)
+
+    if(step == 0){
+      const [
+        contractIn,
+        contractOut,
+        signer,
+        provider,
+        route,
+        balanceTokenIn,
+        balanceTokenOut
+      ] = await initswap(fromToken, toToken, chain_id, amount)
+      setFromContract(contractIn)
+      setToContract(contractOut)
+      setSignerr(signer)
+      setProviderr(provider)
+      setRoutee(route)
+      setFromBalance(balanceTokenIn)
+      setToBalance(balanceTokenOut)
+      setStep(1)
+    }else if(step == 1){
+      setIsLoading(true)
+      const [
+        signer,
+        contractIn,
+        contractOut
+      ] = await approveForSwap(fromContract, toContract, address, chain_id, amount, providerr, signerr);
+      setIsLoading(false)
+      setSignerr(signer)
+      setFromContract(contractIn)
+      setToContract(contractOut)
+      setStep(2)
+    }else if(step == 2){
+      setIsLoading(true)
+      await makeswap(address,routee, signerr, fromContract, toContract)
+      setIsLoading(false)
+    }
   };
 
 
@@ -107,7 +163,7 @@ const Swap = () => {
       {isLoadings && (
         <div className="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
       )}
-      <div className="flex flex-col items-center bg-white p-7 absolute w-full lg:w-1/2 top-[40%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg flex flex-col gap-1 shadow-2xl">
+      <div className="flex flex-col items-center bg-white p-7 absolute w-full lg:w-1/2 top-[50%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg flex flex-col gap-1 shadow-2xl">
 
         <div className="p-[16px] bg-[#f9f9f9] rounded-[16px] w-[90%]">
           <div>
@@ -124,17 +180,16 @@ const Swap = () => {
                 <div className="flex flex-col justify-center item-center">
                   <div className="bg-white rounded-3xl flex min-w-[80px] h-[32px]" style={{border: "1px solid #e9e6e6"}}>
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
-                      // setShowModal(true);
+                       setShowModal(true);
                       console.log(FromTokenBalance, fromToken);
-                      
                       setSelectModal(1);
-                    }}>{FromTokenBalance?.symbol}<span>
+                    }}>{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}<span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
                   </div>
                 </div>
               </div>
-            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {FromTokenBalance?.formatted}</div>
+            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {fromBalance}</div>
             <p className="text-xs ml-1.5 mt-1 text-red-500" hidden={!isExceedBalance}>
               The amount entered exceeds the available balance.
             </p>
@@ -158,14 +213,14 @@ const Swap = () => {
                       setShowModal(true);
                       setSelectModal(2)
                     }}>{
-                      toTokenSymbolTemp == '' ? "Select Token" : toTokenSymbolTemp
+                      toTokenSymbolTemp == '' ? "Select To-Token" : toTokenSymbolTemp
                     }<span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
                   </div>
                 </div>
               </div>
-              <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {ToTokenBalance?.formatted}</div>
+              <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {toBalance}</div>
           </div>
           <div className="absolute top-[-17px] left-[50%] bg-white p-1">
             <div className="w-[25px] h-[25px] flex justify-center items-center bg-[#f9f9f9]">
@@ -176,16 +231,33 @@ const Swap = () => {
 
         <div className="w-[90%]">
           <Button
-            disabled={!isExceedBalance && amount != 0 && toToken && !isLoadings ? false : true}
+            disabled={!isExceedBalance && amount != 0 && fromToken && toToken && !isLoadings ? false : true}
             onClick={onClickSwapButton}
             className="!py-3 bg-[#22222212] w-[100%] text-black h-3xl"
           >
             {
-              fromToken == '' ? "Select Token" : "Swap"
+              fromToken == '' ? "Select Token" : step == 0 ? "Init" : step == 1 ? "Aprove" : "Swap"
             }
           </Button>
         </div>
+        <div className="w-[90%]">
+          <Accordion type="single" collapsible>
+            <AccordionItem value="item-1">
+              <AccordionTrigger>Information for swap</AccordionTrigger>
+              <AccordionContent>
+                <div>
+                  <p>Gas Adjusted Quote: {routee && routee?.quoteGasAdjusted?.toFixed()}</p>
+                  <p>Gas Used Quote Token: {routee && routee?.estimatedGasUsedQuoteToken?.toFixed()}</p>
+                  <p>Gas Used USD: {routee && routee?.estimatedGasUsedUSD?.toFixed()}</p>
+                  <p>Gas Used: {routee && routee?.estimatedGasUsed?.toString()}</p>
+                  <p>Gas Price Wei: {routee && routee?.gasPriceWei}</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       </div>
+      
       { isOpenSuccess && (
         <Alert>
           <AlertTitle>Success!</AlertTitle>
@@ -255,6 +327,7 @@ const Swap = () => {
                           setToTokenSymbolTemp(item.symbol);
                         }else if(selectModal == 1){
                           setFromToken(item.id);
+                          setFromTokenSymbolTemp(item.symbol)
                         }
                         setShowModal(false);
                       }}>
