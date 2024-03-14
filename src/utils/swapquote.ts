@@ -10,6 +10,7 @@ import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/interfaces/I
 import { BigNumber } from '@ethersproject/bignumber';
 
 import ERC20_abi from "./ERC20_abi.json"
+import ERC721_abi from "./ERC721_abi.json"
 
 export const initpoolforswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, chainId: number, inAmountStr: string) => {
     // const { API_URL, PRIVATE_KEY } = process.env;
@@ -29,8 +30,8 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     const signer = provider.getSigner(walletAddress);
 
     // create token contracts and related objects
-    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, signer);
-    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, signer);
+    const contractIn = new ethers.Contract(tokenInContractAddress, ERC721_abi, signer);
+    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC721_abi, signer);
 
     const getTokenAndBalance = async function (contract: ethers.Contract) {
         var [dec, symbol, name, balance] = await Promise.all(
@@ -46,6 +47,8 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
 
     const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
     const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
+
+    // return [balanceTokenIn, balanceTokenOut];
 
     console.log(`Wallet ${walletAddress} balances:`);
     console.log(`   Input: ${tokenIn.symbol} (${tokenIn.name}): ${ethers.utils.formatUnits(balanceTokenIn, tokenIn.decimals)}`);

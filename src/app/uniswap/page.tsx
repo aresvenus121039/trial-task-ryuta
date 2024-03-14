@@ -97,8 +97,8 @@ const Swap = () => {
 
   const onClickSwapButton = async () => {
     // setShowModal(true);
-     const [balancein, balanceout] = await initpoolforswap("0x1c8d43b8d85cc0d2ca2ccd3ea04d45c60be48622", "0x065a049b5be75e4f1d29a03c6edb5acc1a4e3b93", chain_id, '0.2')
-    // console.log("123",balancein, balanceout);
+     const [balancein, balanceout] = await initpoolforswap("0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb", "0x065a049b5be75e4f1d29a03c6edb5acc1a4e3b93", chain_id, '0.2')
+     console.log("123",balancein, balanceout);
   };
 
 

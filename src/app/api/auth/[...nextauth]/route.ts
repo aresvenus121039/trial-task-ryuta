@@ -26,7 +26,6 @@ const handler = NextAuth({
           .from('users')
           .select("*")
           .eq('email', credentials?.email);
-    console.log("authorize here");
           
         if(user)
           passwordCorrect = await compare(
