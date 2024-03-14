@@ -23,7 +23,7 @@ export const initpoolforswap = async (tokenInContractAddress: string, tokenOutCo
     });
     const test = await ethereum.request({
       method: "eth_chainId",
-  });
+    });
     const provider = new ethers.providers.Web3Provider(ethereum);
     const walletAddress = accounts[0];
     const signer = provider.getSigner(walletAddress);
