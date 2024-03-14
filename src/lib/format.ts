@@ -23,16 +23,14 @@ export const updowncheck = (current: string, before: string) => {
   const first = Number(current).toFixed(5)
   const next = Number(before).toFixed(5)
   
-  console.log(first, Number(next));
-  
-  if(first == 0 || first - next == 0){
+  if(first == '0' || first == next){
     return [
       1,
       0
     ]
   }
 
-  const percent = ((Math.abs(first - next) / first) * 100).toFixed(2);
+  const percent = ((Math.abs(Number(first) - Number(next)) / Number(first)) * 100).toFixed(2);
 
   return [
     first >= next,
