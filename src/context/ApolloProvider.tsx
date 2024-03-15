@@ -7,9 +7,10 @@ import { CHAIN_SUBGRAPH_URL } from '@/lib/constants';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const chainId = useChainId();
+  
   const apolloClient = new ApolloClient({
     link: new HttpLink({
-      uri: CHAIN_SUBGRAPH_URL[chainId]
+      uri: CHAIN_SUBGRAPH_URL[chainId] ?? CHAIN_SUBGRAPH_URL[1]
     }),
     cache: new InMemoryCache()
   });

@@ -4,30 +4,28 @@ import { ethers } from "ethers";
 import QuoterABI from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
 import { Pool } from '@uniswap/v3-sdk/'
 import { TradeType, Token, CurrencyAmount, Percent } from '@uniswap/sdk-core'
-import { AlphaRouter } from '@uniswap/smart-order-router'
+import { AlphaRouter, log } from '@uniswap/smart-order-router'
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json'
 import { BigNumber } from '@ethersproject/bignumber';
-import { usePublicClient } from 'wagmi';
 
 import ERC20_abi from "./abis/ERC20_abi.json"
 import ERC721_abi from "./abis/ERC721_abi.json"
 
-export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, chainId: number, inAmountStr: any) => {
-
-    const ethereum = (window as any).ethereum;
-    const accounts = await ethereum.request({
+export const getBalance = async(providerr: any, address: string, chainId: number) => {
+  let ethereum = (window as any).ethereum;
+  let accounts = await ethereum.request({
         method: "eth_requestAccounts",
     });
-    const provider = new ethers.providers.Web3Provider(ethereum);
-    const walletAddress = accounts[0];
-    const signer = provider.getSigner(walletAddress);
+
+    let provider = new ethers.providers.Web3Provider(providerr);
+    let walletAddress = accounts[0];
+    let signer = provider.getSigner(walletAddress); 
 
     // create token contracts and related objects
-    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, signer);
-    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, signer);
+    let contract = new ethers.Contract(address, ERC20_abi, signer);
 
-    const getTokenAndBalance = async function (contract: ethers.Contract) {
+    let getTokenAndBalance = async function (contract: ethers.Contract) {
         var [dec, symbol, name, balance] = await Promise.all(
             [
                 contract.decimals(),
@@ -39,11 +37,55 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
         return [new Token(chainId, contract.address, dec, symbol, name), balance];
     }
 
+    let [_, balance] = await getTokenAndBalance(contract);
+    return ethers.utils.formatUnits(balance, _.decimals)
+}
+
+export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, providerr: any, walletAddresss: any, chainId: number, inAmountStr: any) => {
+
+    const ethereum = (window as any).ethereum;
+    const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+    });
+    // const provider = new ethers.providers.Web3Provider(ethereum);
+    // const walletAddress = accounts[0];
+    // const signer = provider.getSigner(walletAddress);
+    // const provider = new ethers.providers.JsonRpcProvider('https://arb1.arbitrum.io/rpc')
+
+    // // Get write access as an account by getting the signer
+    // const signer = await provider.getSigner()
+
+    const provider = new ethers.providers.Web3Provider(providerr);
+    const walletAddress = accounts[0];
+    const signer = provider.getSigner(walletAddress); 
+
+//     const network = ethers.providers.getNetwork(chainId);
+//     const provider = new ethers.providers.JsonRpcProvider(network.rpcUR);
+//     const walletAddress = accounts[0];
+//     const signer = provider.getSigner(walletAddress); 
+// console.log(signer, tokenInContractAddress);
+
+    // create token contracts and related objects
+    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, signer);
+    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, signer);
+
+    const getTokenAndBalance = async function (contract: ethers.Contract) {
+        var [dec, symbol, name, balance] = await Promise.all(
+            [
+                contract.decimals(),
+                contract.symbol(),
+                contract.name(),
+                contract.balanceOf(walletAddresss)
+            ]);
+
+        return [new Token(chainId, contract.address, dec, symbol, name), balance];
+    }
+
 
     const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
     const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
 
-    console.log(`Wallet ${walletAddress} balances:`);
+    console.log(`Wallet ${walletAddresss} balances:`);
     console.log(`   Input: ${tokenIn.symbol} (${tokenIn.name}): ${ethers.utils.formatUnits(balanceTokenIn, tokenIn.decimals)}`);
     console.log(`   Output: ${tokenOut.symbol} (${tokenOut.name}): ${ethers.utils.formatUnits(balanceTokenOut, tokenOut.decimals)}`);
     console.log("");
@@ -186,8 +228,8 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
       contractIn,
       contractOut,
       signer,
-      provider,
       route,
+      provider,
       balanceTokenIn,
       balanceTokenOut
     ];

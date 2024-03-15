@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcrypt";
 import { supabase } from "@/utils/supabase";
+import prisma from "@/utils/prisma";
 
 export async function POST(request: Request) {
   let message = "";
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     let validateData = await supabase
       .from('users')
       .select("*")
-      .eq('email', email);    
+      .eq('email', email);     
 
     if(validateData.data && validateData.data?.length > 0)
       message = "This Email is already registered!"

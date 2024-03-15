@@ -3,7 +3,7 @@ import React from 'react';
 import { useAccount, useBalance, useChainId  } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { initswap, approveForSwap, makeswap } from '@/utils/swapquote';
+import { initswap, approveForSwap, makeswap, getBalance } from '@/utils/swapquote';
 import Image from 'next/image';
 import {
   Accordion,
@@ -14,6 +14,7 @@ import {
 import NATIVE_TOKENS from "@/utils/native_tokens.json";
 import gql from 'graphql-tag';
 import { useQuery } from '@apollo/client';
+import { redirect } from 'next/navigation';
 
 interface RouteType {
   quoteGasAdjusted? : any;
@@ -57,7 +58,6 @@ const Swap = () => {
 
   const [showModal, setShowModal] = React.useState<boolean>(false)
   const [selectModal, setSelectModal] = React.useState<number>(0)
-  const [tokenlists , setTokenlist] = React.useState<TokenType[]>([])
   const [toTokenSymbolTemp, setToTokenSymbolTemp] = React.useState<string>('')
   const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
 
@@ -65,19 +65,21 @@ const Swap = () => {
   const [toContract, setToContract] = React.useState()
   const [signerr, setSignerr] = React.useState()
   const [providerr, setProviderr] = React.useState()
+  const [provide, setProvide] = React.useState()
   const [routee, setRoutee] = React.useState<RouteType>({})
   
   const [step, setStep] = React.useState(0)
 
-  const { address } = useAccount();
+  const { address, connector, isConnected, isDisconnected } = useAccount();
+
   const { data: FromTokenBalance } = useBalance({
     address: address,
-    token: fromToken as `0x${string}`,
+    // token: fromToken as `0x${string}`,
     watch: true
   });
   const { data: ToTokenBalance } = useBalance({
     address: address,
-    token: toToken as `0x${string}`,
+    // token: toToken as `0x${string}`,
     watch: true
   });
 
@@ -93,9 +95,24 @@ const Swap = () => {
   })
   React.useEffect(() => {
     setIsLoading(loading)
-    console.log("data: ",data);
-    
+    const initProvider = async () => {
+      const provider = await connector?.getProvider();
+      setProvide(provider);
+    }
+    initProvider()
   },[loading])
+  React.useEffect(() => {
+    setFromToken('')
+    setToToken('')
+    setFromTokenSymbolTemp('')
+    setToTokenSymbolTemp('')
+  },[chain_id])
+
+  const walletAuth = React.useMemo(() => {
+    if((!isConnected || isDisconnected) && typeof window !== 'undefined'){
+      redirect('/error/walletconnect')
+    }
+  },[isConnected, isDisconnected])
     
   const onChangeAmountInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if(!fromToken || !toToken){
@@ -105,7 +122,7 @@ const Swap = () => {
     const amountIn = parseFloat(event.target.value || '0');
     setAmount(amountIn);
     setFromTokenAmount(event.target.value || '');
-    if (amountIn > parseFloat(FromTokenBalance?.formatted || '0')) {
+    if (amountIn > fromBalance) {
       setIsExceedBalance(true);
     } else {
       setIsExceedBalance(false);
@@ -114,23 +131,23 @@ const Swap = () => {
 
   const onClickSwapButton = async () => {
     if(step == 0){
-      // await initswap(fromToken, toToken, chain_id, 0.8) //test
+      // await initswap(fromToken, toToken,provide, address, chain_id, 0.8) //test
       const [
         contractIn,
         contractOut,
         signer,
-        provider,
         route,
+        provider,
         balanceTokenIn,
         balanceTokenOut
-      ] = await initswap(fromToken, toToken, chain_id, amount)
+      ] = await initswap(fromToken, toToken,provide, address, chain_id, amount)
       setFromContract(contractIn)
       setToContract(contractOut)
       setSignerr(signer)
-      setProviderr(provider)
       setRoutee(route)
       setFromBalance(balanceTokenIn)
       setToBalance(balanceTokenOut)
+      setProviderr(provider)
       setStep(1)
     }else if(step == 1){
       setIsLoading(true)
@@ -148,6 +165,7 @@ const Swap = () => {
       setIsLoading(true)
       await makeswap(address,routee, signerr, fromContract, toContract)
       setIsLoading(false)
+      setIsOpenSuccess(true)
     }
   };
 
@@ -168,7 +186,7 @@ const Swap = () => {
                   type="text"
                   value={fromTokenAmount}
                   placeholder="0"
-                  disabled={address ? false : true}
+                  disabled={fromToken ? false : true}
                   onChange={onChangeAmountInput}
                 />
                 <div className="flex flex-col justify-center item-center">
@@ -182,7 +200,7 @@ const Swap = () => {
                   </div>
                 </div>
               </div>
-            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {FromTokenBalance?.formatted}</div>
+            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {fromBalance}</div>
             <p className="text-xs ml-1.5 mt-1 text-red-500" hidden={!isExceedBalance}>
               The amount entered exceeds the available balance.
             </p>
@@ -312,13 +330,16 @@ const Swap = () => {
                 </div>
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
-                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={() => {
+                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
+                      // const balance = await getBalance(provide, NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address, chain_id)                      
                       if(selectModal == 2){
                         setToToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
                         setToTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken);
+                        // setToBalance(balance)
                       }else if(selectModal == 1){
                         setFromToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
                         setFromTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken)
+                        // setFromBalance(balance)
                       }
                       setShowModal(false);
                     }}>
@@ -332,13 +353,16 @@ const Swap = () => {
                     </div>
                   {
                     data.tokens && data.tokens.map((item: TokenType, id: number) => (
-                      <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={() => {
+                      <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
+                        // const balance = await getBalance(provide, item.id, chain_id)
                         if(selectModal == 2){
                           setToToken(item.id);
                           setToTokenSymbolTemp(item.symbol);
+                          // setToBalance(balance)
                         }else if(selectModal == 1){
                           setFromToken(item.id);
                           setFromTokenSymbolTemp(item.symbol)
+                          // setFromBalance(balance)
                         }
                         setShowModal(false);
                       }}>

@@ -2,19 +2,18 @@ import NextAuth from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcrypt";
 import { supabase } from "@/utils/supabase";
+import prisma from "@/utils/prisma";
 
 const handler = NextAuth({
   session: {
       strategy: "jwt",
   },
-
   pages: {
       signIn: "/login",
   },
 
   providers: [
     CredentialsProvider({
-      // The name to display on the sign in form (e.g. 'Sign in with...')
       name: "Credentials",
       credentials: {
           email: {},
@@ -25,7 +24,7 @@ const handler = NextAuth({
         let {data: user} = await supabase
           .from('users')
           .select("*")
-          .eq('email', credentials?.email);
+          .eq('email', credentials?.email);        
           
         if(user)
           passwordCorrect = await compare(
