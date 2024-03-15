@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import NATIVE_TOKENS from "@/utils/native_tokens.json";
 import gql from 'graphql-tag';
-import { useQuery } from '@apollo/client';
+import { useLazyQuery, useQuery } from '@apollo/client';
 import { redirect } from 'next/navigation';
 
 interface RouteType {
@@ -40,6 +40,16 @@ const TOKENLISTS_QUERY = gql`
       }
     }
 `
+const FILTER_QUERY = gql`
+        query GET($name: String!) {
+          tokens(orderBy: volumeUSD, orderDirection: desc, first: 10, where: {symbol: $name}) {
+            decimals
+            name
+            symbol
+            id
+          }
+        }
+    `
 
 const Swap = () => {
   const [amount, setAmount] = React.useState(0);
@@ -48,7 +58,8 @@ const Swap = () => {
   const [isExceedBalance, setIsExceedBalance] = React.useState(false);
   const [isInvalidFromToken, setIsInvalidFromToken] = React.useState(false);
   const [isInvalidToToken, setIsInvalidToToken] = React.useState(false);
-  const [fromToken, setFromToken] = React.useState('');
+  const [fromToken, setFromToken] = React.useState<string>('');
+  const [tokenLists, setTokenLists] = React.useState<TokenType[]>([]);
   const [toToken, setToToken] = React.useState('');
   const [fromBalance, setFromBalance] = React.useState(0);
   const [toBalance, setToBalance] = React.useState(0);
@@ -67,6 +78,7 @@ const Swap = () => {
   const [providerr, setProviderr] = React.useState()
   const [provide, setProvide] = React.useState()
   const [routee, setRoutee] = React.useState<RouteType>({})
+  const [searchName, setSearchName] = React.useState<string>('')
   
   const [step, setStep] = React.useState(0)
 
@@ -93,12 +105,26 @@ const Swap = () => {
       amount: 10
     }
   })
+  const [
+    filterAction,
+    { data : filterData, loading: filterLoading }
+  ] = useLazyQuery(FILTER_QUERY,{
+    variables: {
+      name: searchName
+    }
+  })
+  React.useEffect(() => {
+    setIsLoading(filterLoading)
+    if(!filterLoading) setTokenLists(filterData?.tokens);    
+  },[filterLoading])
+
   React.useEffect(() => {
     setIsLoading(loading)
     const initProvider = async () => {
       const provider = await connector?.getProvider();
       setProvide(provider);
     }
+    if(!loading) setTokenLists(data?.tokens)
     initProvider()
   },[loading])
   React.useEffect(() => {
@@ -168,6 +194,9 @@ const Swap = () => {
     }
   };
 
+  const onSearch = () => {
+    filterAction()
+  }
 
   return (
     <>
@@ -306,10 +335,12 @@ const Swap = () => {
                     <div className="flex space-x-1">
                         <input
                             type="text"
+                            value={searchName}
                             className="block w-full px-4 py-2 text-purple-700 bg-white border rounded-full focus:border-purple-400 focus:ring-purple-300 focus:outline-none focus:ring focus:ring-opacity-40"
                             placeholder="Search..."
+                            onChange={e => setSearchName(e.target.value)}
                         />
-                        <button className="px-4 text-white bg-purple-600 rounded-full ">
+                        <button className="px-4 text-white bg-purple-600 rounded-full " onClick={() => onSearch()}>
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="w-5 h-5"
@@ -351,7 +382,7 @@ const Swap = () => {
                       </div>
                     </div>
                   {
-                    data.tokens && data.tokens.map((item: TokenType, id: number) => (
+                    tokenLists && tokenLists.map((item: TokenType, id: number) => (
                       <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
                         const balance = await getBalance(provide, item.id, chain_id)
                         if(selectModal == 2){
