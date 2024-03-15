@@ -1,16 +1,81 @@
 
 // Uniswap and Web3 modules
-import { ethers } from "ethers";
+import { ethers, providers as ethersProviders, Signer, VoidSigner } from "ethers";
 import QuoterABI from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
-import { Pool } from '@uniswap/v3-sdk/'
+import { Pool, computePoolAddress } from '@uniswap/v3-sdk/'
 import { TradeType, Token, CurrencyAmount, Percent } from '@uniswap/sdk-core'
 import { AlphaRouter, log } from '@uniswap/smart-order-router'
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json'
 import { BigNumber } from '@ethersproject/bignumber';
+import { ChainId, CHAIN_INFO, RPCType } from "@/lib/chain";
 
 import ERC20_abi from "./abis/ERC20_abi.json"
 import ERC721_abi from "./abis/ERC721_abi.json"
+import { MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, MGAOP_QUOTER_CONTRACT_ADDRESS, MGAOP_SWAP_ROUTER_02_ADDRESS } from "@/lib/constants";
+
+export type InfuraChainName =
+  | 'homestead'
+  | 'goerli'
+  | 'arbitrum'
+  | 'base'
+  | 'bnbsmartchain-mainnet'
+  | 'optimism'
+  | 'matic'
+  | 'maticmum'
+
+export function getInfuraChainName(chainId: ChainId): InfuraChainName {
+  switch (chainId) {
+    case ChainId.Mainnet:
+      return 'homestead'
+    case ChainId.Goerli:
+      return 'goerli'
+    case ChainId.ArbitrumOne:
+      return 'arbitrum'
+    case ChainId.Base:
+      return 'base'
+    case ChainId.Bnb:
+      return 'bnbsmartchain-mainnet'
+    case ChainId.Optimism:
+      return 'optimism'
+    case ChainId.Polygon:
+      return 'matic'
+    case ChainId.PolygonMumbai:
+      return 'maticmum'
+    default:
+      throw new Error(`Unsupported eth infura chainId for ${chainId}`)
+  }
+}
+
+export function createEthersProvider(
+  chainId: ChainId,
+  rpcType: RPCType = RPCType.Public
+): ethersProviders.JsonRpcProvider | null {
+  try {
+    if (rpcType === RPCType.Private) {
+      const privateRPCUrl = CHAIN_INFO[chainId].rpcUrls?.[RPCType.Private]
+      if (!privateRPCUrl) {
+        throw new Error(`No private RPC available for chain ${chainId}`)
+      }
+      return new ethersProviders.JsonRpcProvider(privateRPCUrl)
+    }
+
+    try {
+      const publicRPCUrl = CHAIN_INFO[chainId].rpcUrls?.[RPCType.Public]
+      if (publicRPCUrl) {
+        return new ethersProviders.JsonRpcProvider(publicRPCUrl)
+      }
+
+      return new ethersProviders.InfuraProvider(getInfuraChainName(chainId), "9140a8fc9a6546e08aa2001dfbd567dd")
+    } catch (error) {
+      const altPublicRPCUrl = CHAIN_INFO[chainId].rpcUrls?.[RPCType.PublicAlt]
+      return new ethersProviders.JsonRpcProvider(altPublicRPCUrl)
+    }
+  } catch (error) {
+    console.log("error");
+    return null
+  }
+}
 
 export const getBalance = async(providerr: any, address: string, chainId: number) => {
   let ethereum = (window as any).ethereum;
@@ -18,10 +83,12 @@ export const getBalance = async(providerr: any, address: string, chainId: number
         method: "eth_requestAccounts",
     });
 
-    let provider = new ethers.providers.Web3Provider(providerr);
+    // let provider = new ethers.providers.Web3Provider(providerr);
     let walletAddress = accounts[0];
-    let signer = provider.getSigner(walletAddress); 
-
+    let provider = createEthersProvider(chainId);    
+    if(provider == null) provider = new ethers.providers.Web3Provider(providerr);
+    let signer = new VoidSigner(walletAddress, provider);
+    
     // create token contracts and related objects
     let contract = new ethers.Contract(address, ERC20_abi, signer);
 
@@ -38,36 +105,27 @@ export const getBalance = async(providerr: any, address: string, chainId: number
     }
 
     let [_, balance] = await getTokenAndBalance(contract);
+
     return ethers.utils.formatUnits(balance, _.decimals)
 }
 
 export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, providerr: any, walletAddresss: any, chainId: number, inAmountStr: any) => {
 
     const ethereum = (window as any).ethereum;
-    const accounts = await ethereum.request({
-        method: "eth_requestAccounts",
-    });
+    // const accounts = await ethereum.request({
+    //     method: "eth_requestAccounts",
+    // });
     // const provider = new ethers.providers.Web3Provider(ethereum);
     // const walletAddress = accounts[0];
     // const signer = provider.getSigner(walletAddress);
-    // const provider = new ethers.providers.JsonRpcProvider('https://arb1.arbitrum.io/rpc')
 
-    // // Get write access as an account by getting the signer
-    // const signer = await provider.getSigner()
-
-    const provider = new ethers.providers.Web3Provider(providerr);
-    const walletAddress = accounts[0];
-    const signer = provider.getSigner(walletAddress); 
-
-//     const network = ethers.providers.getNetwork(chainId);
-//     const provider = new ethers.providers.JsonRpcProvider(network.rpcUR);
-//     const walletAddress = accounts[0];
-//     const signer = provider.getSigner(walletAddress); 
-// console.log(signer, tokenInContractAddress);
+    let provider = createEthersProvider(chainId);    
+    if(provider == null) provider = new ethers.providers.Web3Provider(providerr);
+    let signer = new VoidSigner(walletAddresss, provider);
 
     // create token contracts and related objects
-    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, signer);
-    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, signer);
+    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, provider);
+    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, provider);
 
     const getTokenAndBalance = async function (contract: ethers.Contract) {
         var [dec, symbol, name, balance] = await Promise.all(
@@ -92,14 +150,14 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
 
     console.log("Loading pool information...");
 
-    const UNISWAP_FACTORY_ADDRESS = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
-    const factoryContract = new ethers.Contract(UNISWAP_FACTORY_ADDRESS, IUniswapV3Factory.abi, provider);
+    const factoryContract = new ethers.Contract(MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, IUniswapV3Factory.abi, provider);
 
     // loading pool smart contract address
     const poolAddress = await factoryContract.getPool(
         tokenIn.address,
         tokenOut.address,
         3000);  // commission - 3%
+  //const poolAddress = computePoolAddress({ UNISWAP_FACTORY_ADDRESS, tokenIn, tokenOut, fee: 3000 })
 
     if (Number(poolAddress).toString() === "0") // there is no such pool for provided In-Out tokens.
         throw `Error: No pool ${tokenIn.symbol}-${tokenOut.symbol}`;
@@ -166,8 +224,8 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
 
     // this is Uniswap quoter smart contract, same address on all chains
     // (from https://docs.uniswap.org/protocol/reference/deployments)
-    const UNISWAP_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
-    const quoterContract = new ethers.Contract(UNISWAP_QUOTER_ADDRESS, QuoterABI.abi, provider);
+    // const UNISWAP_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
+    const quoterContract = new ethers.Contract(MGAOP_QUOTER_CONTRACT_ADDRESS, QuoterABI.abi, provider);
 
     const quotedAmountOut = await quoterContract.callStatic.quoteExactInputSingle(
         tokenIn.address,
@@ -194,7 +252,7 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
         TradeType.EXACT_INPUT,
         // swapOptions
         {
-            recipient: walletAddress,
+            recipient: walletAddresss,
             slippageTolerance: new Percent(5, 100),          // Big slippage – for a test
             deadline: Math.floor(Date.now() / 1000 + 1800)    // add 1800 seconds – 30 mins deadline
         },
@@ -236,18 +294,12 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
   }
 
 export const approveForSwap = async (contractIn: any, contractOut: any,walletAddress: any, chainId: any, amountIn: any, provider: any, signer: any) => {
-
-    // address of a swap router
-  const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
-
-  // For Metamask it will be just "await contractIn.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);"
-
   // here we just create a transaction object (not sending it to blockchain).
-  const approveTxUnsigned = await contractIn.populateTransaction.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
+  const approveTxUnsigned = await contractIn.populateTransaction.approve(MGAOP_SWAP_ROUTER_02_ADDRESS, amountIn);
   // by default chainid is not set https://ethereum.stackexchange.com/questions/94412/valueerror-code-32000-message-only-replay-protected-eip-155-transac
   approveTxUnsigned.chainId = chainId;
   // estimate gas required to make approve call (not sending it to blockchain either)
-  approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(V3_SWAP_ROUTER_ADDRESS, amountIn);
+  approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(MGAOP_SWAP_ROUTER_02_ADDRESS, amountIn);
   // suggested gas price (increase if you want faster execution)
   approveTxUnsigned.gasPrice = await provider.getGasPrice();
   // nonce is the same as number previous transactions
@@ -270,13 +322,12 @@ export const approveForSwap = async (contractIn: any, contractOut: any,walletAdd
 }
 
 export const makeswap = async (walletAddress: any, route: any, signer: any, contractIn: any, contractOut: any) => {
-  const V3_SWAP_ROUTER_ADDRESS = '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45';
   console.log("Making a swap...");
   const value = BigNumber.from(route.methodParameters.value);
 
   const transaction = {
       data: route.methodParameters.calldata,
-      to: V3_SWAP_ROUTER_ADDRESS,
+      to: MGAOP_SWAP_ROUTER_02_ADDRESS,
       value: value,
       from: walletAddress,
       gasPrice: route.gasPriceWei,
@@ -298,4 +349,9 @@ export const makeswap = async (walletAddress: any, route: any, signer: any, cont
       contractIn.balanceOf(walletAddress),
       contractOut.balanceOf(walletAddress)
   ]);
+
+  return [
+    newBalanceIn,
+    newBalanceOut
+  ]
 }

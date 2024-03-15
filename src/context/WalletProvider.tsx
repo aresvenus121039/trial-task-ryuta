@@ -12,9 +12,9 @@ import {
 import { Chain, configureChains, createConfig, WagmiConfig } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
 import { alchemyProvider } from "wagmi/providers/alchemy";
-import { mainnet, goerli,sepolia,bsc,polygonMumbai } from "wagmi/chains";
+import { mainnet, goerli,sepolia,bsc,polygonMumbai,base,arbitrum } from "wagmi/chains";
 
-const chainss : Chain[] = [mainnet,bsc, goerli,sepolia];
+const chainss : Chain[] = [mainnet,base,goerli];
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(chainss, [
   publicProvider(),

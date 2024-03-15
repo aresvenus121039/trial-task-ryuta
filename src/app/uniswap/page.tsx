@@ -131,7 +131,6 @@ const Swap = () => {
 
   const onClickSwapButton = async () => {
     if(step == 0){
-      // await initswap(fromToken, toToken,provide, address, chain_id, 0.8) //test
       const [
         contractIn,
         contractOut,
@@ -175,7 +174,7 @@ const Swap = () => {
       {isLoadings && (
         <div className="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
       )}
-      <div className="flex flex-col items-center bg-white p-7 absolute w-full lg:w-1/2 top-[50%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg flex flex-col gap-1 shadow-2xl">
+      <div className="flex flex-col items-center bg-white p-7 absolute w-full lg:w-1/2 top-[55%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-lg flex flex-col gap-1 shadow-2xl">
 
         <div className="p-[16px] bg-[#f9f9f9] rounded-[16px] w-[90%]">
           <div>
@@ -192,9 +191,9 @@ const Swap = () => {
                 <div className="flex flex-col justify-center item-center">
                   <div className="bg-white rounded-3xl flex min-w-[80px] h-[32px]" style={{border: "1px solid #e9e6e6"}}>
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
-                       setShowModal(true);
+                      setShowModal(true);
                       setSelectModal(1);
-                    }}>{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}<span>
+                    }}><div className="text-ellipsis text-nowrap overflow-hidden">{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}</div><span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
                   </div>
@@ -223,9 +222,9 @@ const Swap = () => {
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
                       setShowModal(true);
                       setSelectModal(2)
-                    }}>{
+                    }}><div className="text-ellipsis text-nowrap overflow-hidden">{
                       toTokenSymbolTemp == '' ? "Select To-Token" : toTokenSymbolTemp
-                    }<span>
+                    }</div><span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
                   </div>
@@ -331,15 +330,15 @@ const Swap = () => {
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
                     <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
-                      // const balance = await getBalance(provide, NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address, chain_id)                      
+                      const balance = await getBalance(provide, NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address, chain_id)                      
                       if(selectModal == 2){
                         setToToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
                         setToTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken);
-                        // setToBalance(balance)
+                        setToBalance(parseFloat(balance))
                       }else if(selectModal == 1){
                         setFromToken(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].Address);
                         setFromTokenSymbolTemp(NATIVE_TOKENS.filter(item => item.ChainId == chain_id)[0].WrappedNativeToken)
-                        // setFromBalance(balance)
+                        setFromBalance(parseFloat(balance))
                       }
                       setShowModal(false);
                     }}>
@@ -354,15 +353,15 @@ const Swap = () => {
                   {
                     data.tokens && data.tokens.map((item: TokenType, id: number) => (
                       <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
-                        // const balance = await getBalance(provide, item.id, chain_id)
+                        const balance = await getBalance(provide, item.id, chain_id)
                         if(selectModal == 2){
                           setToToken(item.id);
                           setToTokenSymbolTemp(item.symbol);
-                          // setToBalance(balance)
+                          setToBalance(parseFloat(balance))
                         }else if(selectModal == 1){
                           setFromToken(item.id);
                           setFromTokenSymbolTemp(item.symbol)
-                          // setFromBalance(balance)
+                          setFromBalance(parseFloat(balance))
                         }
                         setShowModal(false);
                       }}>
