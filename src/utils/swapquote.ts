@@ -77,223 +77,223 @@ export function createEthersProvider(
   }
 }
 
-export const getBalance = async(providerr: any, address: string, chainId: number) => {
+export const getBalance = async (providerr: any, address: string, chainId: number) => {
   let ethereum = (window as any).ethereum;
   let accounts = await ethereum.request({
-        method: "eth_requestAccounts",
-    });
+    method: "eth_requestAccounts",
+  });
 
-    // let provider = new ethers.providers.Web3Provider(providerr);
-    let walletAddress = accounts[0];
-    let provider = createEthersProvider(chainId);    
-    if(provider == null) provider = new ethers.providers.Web3Provider(providerr);
-    let signer = new VoidSigner(walletAddress, provider);
-    
-    // create token contracts and related objects
-    let contract = new ethers.Contract(address, ERC20_abi, signer);
+  // let provider = new ethers.providers.Web3Provider(providerr);
+  let walletAddress = accounts[0];
+  let provider = createEthersProvider(chainId);
+  if (provider == null) provider = new ethers.providers.Web3Provider(providerr);
+  let signer = new VoidSigner(walletAddress, provider);
+  // create token contracts and related objects
+  let contract = new ethers.Contract(address, ERC20_abi, provider);
 
-    let getTokenAndBalance = async function (contract: ethers.Contract) {
-        var [dec, symbol, name, balance] = await Promise.all(
-            [
-                contract.decimals(),
-                contract.symbol(),
-                contract.name(),
-                contract.balanceOf(walletAddress)
-            ]);
+  let getTokenAndBalance = async function (contract: ethers.Contract) {
+    var [dec, symbol, name, balance] = await Promise.all(
+      [
+        contract.decimals(),
+        contract.symbol(),
+        contract.name(),
+        contract.balanceOf(walletAddress as `0x${string}`)
+      ]);
 
-        return [new Token(chainId, contract.address, dec, symbol, name), balance];
-    }
+    return [new Token(chainId, contract.address, dec, symbol, name), balance];
+  }
 
-    let [_, balance] = await getTokenAndBalance(contract);
+  let [_, balance] = await getTokenAndBalance(contract);
+  const bigNumberDec = ethers.BigNumber.from(balance).toString();
 
-    return ethers.utils.formatUnits(balance, _.decimals)
+  return ethers.utils.formatUnits(balance, _.decimals)
 }
 
 export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, providerr: any, walletAddresss: any, chainId: number, inAmountStr: any) => {
 
-    const ethereum = (window as any).ethereum;
-    // const accounts = await ethereum.request({
-    //     method: "eth_requestAccounts",
-    // });
-    // const provider = new ethers.providers.Web3Provider(ethereum);
-    // const walletAddress = accounts[0];
-    // const signer = provider.getSigner(walletAddress);
+  const ethereum = (window as any).ethereum;
+  // const accounts = await ethereum.request({
+  //     method: "eth_requestAccounts",
+  // });
+  // const provider = new ethers.providers.Web3Provider(ethereum);
+  // const walletAddress = accounts[0];
+  // const signer = provider.getSigner(walletAddress);
 
-    let provider = createEthersProvider(chainId);    
-    if(provider == null) provider = new ethers.providers.Web3Provider(providerr);
-    let signer = new VoidSigner(walletAddresss, provider);
+  let provider = createEthersProvider(chainId);
+  if (provider == null) provider = new ethers.providers.Web3Provider(providerr);
+  let signer = new VoidSigner(walletAddresss, provider);
 
-    // create token contracts and related objects
-    const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, provider);
-    const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, provider);
+  // create token contracts and related objects
+  const contractIn = new ethers.Contract(tokenInContractAddress, ERC20_abi, provider);
+  const contractOut = new ethers.Contract(tokenOutContractAddress, ERC20_abi, provider);
 
-    const getTokenAndBalance = async function (contract: ethers.Contract) {
-        var [dec, symbol, name, balance] = await Promise.all(
-            [
-                contract.decimals(),
-                contract.symbol(),
-                contract.name(),
-                contract.balanceOf(walletAddresss)
-            ]);
+  const getTokenAndBalance = async function (contract: ethers.Contract) {
+    var [dec, symbol, name, balance] = await Promise.all(
+      [
+        contract.decimals(),
+        contract.symbol(),
+        contract.name(),
+        contract.balanceOf(walletAddresss)
+      ]);
 
-        return [new Token(chainId, contract.address, dec, symbol, name), balance];
-    }
-
-
-    const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
-    const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
-
-    console.log(`Wallet ${walletAddresss} balances:`);
-    console.log(`   Input: ${tokenIn.symbol} (${tokenIn.name}): ${ethers.utils.formatUnits(balanceTokenIn, tokenIn.decimals)}`);
-    console.log(`   Output: ${tokenOut.symbol} (${tokenOut.name}): ${ethers.utils.formatUnits(balanceTokenOut, tokenOut.decimals)}`);
-    console.log("");
-
-    console.log("Loading pool information...");
-
-    const factoryContract = new ethers.Contract(MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, IUniswapV3Factory.abi, provider);
-
-    // loading pool smart contract address
-    const poolAddress = await factoryContract.getPool(
-        tokenIn.address,
-        tokenOut.address,
-        3000);  // commission - 3%
-  //const poolAddress = computePoolAddress({ UNISWAP_FACTORY_ADDRESS, tokenIn, tokenOut, fee: 3000 })
-
-    if (Number(poolAddress).toString() === "0") // there is no such pool for provided In-Out tokens.
-        throw `Error: No pool ${tokenIn.symbol}-${tokenOut.symbol}`;
-
-    const poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
-
-    const getPoolState = async function () {
-        const [liquidity, slot] = await Promise.all([poolContract.liquidity(), poolContract.slot0()]);
-
-        return {
-            liquidity: liquidity,
-            sqrtPriceX96: slot[0],
-            tick: slot[1],
-            observationIndex: slot[2],
-            observationCardinality: slot[3],
-            observationCardinalityNext: slot[4],
-            feeProtocol: slot[5],
-            unlocked: slot[6],
-        }
-    }
-
-    const getPoolImmutables = async function () {
-        const [factory, token0, token1, fee, tickSpacing, maxLiquidityPerTick] = await Promise.all([
-            poolContract.factory(),
-            poolContract.token0(),
-            poolContract.token1(),
-            poolContract.fee(),
-            poolContract.tickSpacing(),
-            poolContract.maxLiquidityPerTick(),
-        ]);
-
-        return {
-            factory: factory,
-            token0: token0,
-            token1: token1,
-            fee: fee,
-            tickSpacing: tickSpacing,
-            maxLiquidityPerTick: maxLiquidityPerTick,
-        }
-    }
-
-    // loading immutable pool parameters and its current state (variable parameters)
-    const [immutables, state] = await Promise.all([getPoolImmutables(), getPoolState()]);
-
-    const pool = new Pool(
-        tokenIn,
-        tokenOut,
-        immutables.fee,
-        state.sqrtPriceX96.toString(),
-        state.liquidity.toString(),
-        state.tick
-    );
-
-    // print token prices in the pool
-    console.log("Token prices in pool:");
-    console.log(`   1 ${pool.token0.symbol} = ${pool.token0Price.toSignificant()} ${pool.token1.symbol}`);
-    console.log(`   1 ${pool.token1.symbol} = ${pool.token1Price.toSignificant()} ${pool.token0.symbol}`);
-    console.log('');
-
-
-    console.log("Loading up quote for a swap...");
-
-    const amountIn = ethers.utils.parseUnits(inAmountStr, tokenIn.decimals);
-
-    // this is Uniswap quoter smart contract, same address on all chains
-    // (from https://docs.uniswap.org/protocol/reference/deployments)
-    // const UNISWAP_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
-    const quoterContract = new ethers.Contract(MGAOP_QUOTER_CONTRACT_ADDRESS, QuoterABI.abi, provider);
-
-    const quotedAmountOut = await quoterContract.callStatic.quoteExactInputSingle(
-        tokenIn.address,
-        tokenOut.address,
-        pool.fee,
-        amountIn,
-        0
-    );
-
-    console.log(`   You'll get approximately ${ethers.utils.formatUnits(quotedAmountOut, tokenOut.decimals)} ${tokenOut.symbol} for ${inAmountStr} ${tokenIn.symbol}`);
-    console.log('');
-
-
-    // =============
-    console.log('');
-    console.log("Loading a swap route...");
-
-    const inAmount = CurrencyAmount.fromRawAmount(tokenIn, amountIn.toString());
-
-    const router = new AlphaRouter({ chainId: tokenIn.chainId, provider: provider });
-    const route = await router.route(
-        inAmount,
-        tokenOut,
-        TradeType.EXACT_INPUT,
-        // swapOptions
-        {
-            recipient: walletAddresss,
-            slippageTolerance: new Percent(5, 100),          // Big slippage – for a test
-            deadline: Math.floor(Date.now() / 1000 + 1800)    // add 1800 seconds – 30 mins deadline
-        },
-        // router config
-        {
-            // only one direct swap for a reason – 2 swaps thru DAI (USDT->DAI->WETH) didn't work on Rinkeby
-            // There was an overflow problem https://rinkeby.etherscan.io/tx/0xaed297f2f51f17b329ce755b11635980268f3fc88aae10e78cf59f2c6e65ca7f
-            // The was DAI balance for UniswapV2Pair was greater than 2^112-1 (https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol)
-            // UniswapV2Pair – https://rinkeby.etherscan.io/address/0x8b22f85d0c844cf793690f6d9dfe9f11ddb35449
-            // WETH – https://rinkeby.etherscan.io/address/0xc778417e063141139fce010982780140aa0cd5ab#readContract
-            // DAI – https://rinkeby.etherscan.io/address/0xc7ad46e0b8a400bb3c915120d284aafba8fc4735#readContract (balance of UniswapV2Pair more than 2^112-1)
-
-            maxSwapsPerPath: 1 // remove this if you want multi-hop swaps as well.
-        }
-    );
-
-    if (route == null || route.methodParameters === undefined)
-        throw "No route loaded";
-
-    console.log(`   You'll get ${route.quote.toFixed()} of ${tokenOut.symbol}`);
-
-    // output quote minus gas fees
-    console.log(`   Gas Adjusted Quote: ${route.quoteGasAdjusted.toFixed()}`);
-    console.log(`   Gas Used Quote Token: ${route.estimatedGasUsedQuoteToken.toFixed()}`);
-    console.log(`   Gas Used USD: ${route.estimatedGasUsedUSD.toFixed()}`);
-    console.log(`   Gas Used: ${route.estimatedGasUsed.toString()}`);
-    console.log(`   Gas Price Wei: ${route.gasPriceWei}`);
-    console.log('');
-
-    return [
-      contractIn,
-      contractOut,
-      signer,
-      route,
-      provider,
-      balanceTokenIn,
-      balanceTokenOut
-    ];
+    return [new Token(chainId, contract.address, dec, symbol, name), balance];
   }
 
-export const approveForSwap = async (contractIn: any, contractOut: any,walletAddress: any, chainId: any, amountIn: any, provider: any, signer: any) => {
+
+  const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
+  const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
+
+  console.log(`Wallet ${walletAddresss} balances:`);
+  console.log(`   Input: ${tokenIn.symbol} (${tokenIn.name}): ${ethers.utils.formatUnits(balanceTokenIn, tokenIn.decimals)}`);
+  console.log(`   Output: ${tokenOut.symbol} (${tokenOut.name}): ${ethers.utils.formatUnits(balanceTokenOut, tokenOut.decimals)}`);
+  console.log("");
+
+  console.log("Loading pool information...");
+
+  const factoryContract = new ethers.Contract(MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, IUniswapV3Factory.abi, provider);
+
+  // loading pool smart contract address
+  const poolAddress = await factoryContract.getPool(
+    tokenIn.address,
+    tokenOut.address,
+    3000);  // commission - 3%
+  //const poolAddress = computePoolAddress({ UNISWAP_FACTORY_ADDRESS, tokenIn, tokenOut, fee: 3000 })
+
+  if (Number(poolAddress).toString() === "0") // there is no such pool for provided In-Out tokens.
+    throw `Error: No pool ${tokenIn.symbol}-${tokenOut.symbol}`;
+
+  const poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
+
+  const getPoolState = async function () {
+    const [liquidity, slot] = await Promise.all([poolContract.liquidity(), poolContract.slot0()]);
+
+    return {
+      liquidity: liquidity,
+      sqrtPriceX96: slot[0],
+      tick: slot[1],
+      observationIndex: slot[2],
+      observationCardinality: slot[3],
+      observationCardinalityNext: slot[4],
+      feeProtocol: slot[5],
+      unlocked: slot[6],
+    }
+  }
+
+  const getPoolImmutables = async function () {
+    const [factory, token0, token1, fee, tickSpacing, maxLiquidityPerTick] = await Promise.all([
+      poolContract.factory(),
+      poolContract.token0(),
+      poolContract.token1(),
+      poolContract.fee(),
+      poolContract.tickSpacing(),
+      poolContract.maxLiquidityPerTick(),
+    ]);
+
+    return {
+      factory: factory,
+      token0: token0,
+      token1: token1,
+      fee: fee,
+      tickSpacing: tickSpacing,
+      maxLiquidityPerTick: maxLiquidityPerTick,
+    }
+  }
+
+  // loading immutable pool parameters and its current state (variable parameters)
+  const [immutables, state] = await Promise.all([getPoolImmutables(), getPoolState()]);
+
+  const pool = new Pool(
+    tokenIn,
+    tokenOut,
+    immutables.fee,
+    state.sqrtPriceX96.toString(),
+    state.liquidity.toString(),
+    state.tick
+  );
+
+  // print token prices in the pool
+  console.log("Token prices in pool:");
+  console.log(`   1 ${pool.token0.symbol} = ${pool.token0Price.toSignificant()} ${pool.token1.symbol}`);
+  console.log(`   1 ${pool.token1.symbol} = ${pool.token1Price.toSignificant()} ${pool.token0.symbol}`);
+  console.log('');
+
+
+  console.log("Loading up quote for a swap...");
+
+  const amountIn = ethers.utils.parseUnits(inAmountStr, tokenIn.decimals);
+
+  // this is Uniswap quoter smart contract, same address on all chains
+  // (from https://docs.uniswap.org/protocol/reference/deployments)
+  // const UNISWAP_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
+  const quoterContract = new ethers.Contract(MGAOP_QUOTER_CONTRACT_ADDRESS, QuoterABI.abi, provider);
+
+  const quotedAmountOut = await quoterContract.callStatic.quoteExactInputSingle(
+    tokenIn.address,
+    tokenOut.address,
+    pool.fee,
+    amountIn,
+    0
+  );
+
+  console.log(`   You'll get approximately ${ethers.utils.formatUnits(quotedAmountOut, tokenOut.decimals)} ${tokenOut.symbol} for ${inAmountStr} ${tokenIn.symbol}`);
+  console.log('');
+
+
+  // =============
+  console.log('');
+  console.log("Loading a swap route...");
+
+  const inAmount = CurrencyAmount.fromRawAmount(tokenIn, amountIn.toString());
+
+  const router = new AlphaRouter({ chainId: tokenIn.chainId, provider: provider });
+  const route = await router.route(
+    inAmount,
+    tokenOut,
+    TradeType.EXACT_INPUT,
+    // swapOptions
+    {
+      recipient: walletAddresss,
+      slippageTolerance: new Percent(5, 100),          // Big slippage – for a test
+      deadline: Math.floor(Date.now() / 1000 + 1800)    // add 1800 seconds – 30 mins deadline
+    },
+    // router config
+    {
+      // only one direct swap for a reason – 2 swaps thru DAI (USDT->DAI->WETH) didn't work on Rinkeby
+      // There was an overflow problem https://rinkeby.etherscan.io/tx/0xaed297f2f51f17b329ce755b11635980268f3fc88aae10e78cf59f2c6e65ca7f
+      // The was DAI balance for UniswapV2Pair was greater than 2^112-1 (https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol)
+      // UniswapV2Pair – https://rinkeby.etherscan.io/address/0x8b22f85d0c844cf793690f6d9dfe9f11ddb35449
+      // WETH – https://rinkeby.etherscan.io/address/0xc778417e063141139fce010982780140aa0cd5ab#readContract
+      // DAI – https://rinkeby.etherscan.io/address/0xc7ad46e0b8a400bb3c915120d284aafba8fc4735#readContract (balance of UniswapV2Pair more than 2^112-1)
+
+      maxSwapsPerPath: 1 // remove this if you want multi-hop swaps as well.
+    }
+  );
+
+  if (route == null || route.methodParameters === undefined)
+    throw "No route loaded";
+
+  console.log(`   You'll get ${route.quote.toFixed()} of ${tokenOut.symbol}`);
+
+  // output quote minus gas fees
+  console.log(`   Gas Adjusted Quote: ${route.quoteGasAdjusted.toFixed()}`);
+  console.log(`   Gas Used Quote Token: ${route.estimatedGasUsedQuoteToken.toFixed()}`);
+  console.log(`   Gas Used USD: ${route.estimatedGasUsedUSD.toFixed()}`);
+  console.log(`   Gas Used: ${route.estimatedGasUsed.toString()}`);
+  console.log(`   Gas Price Wei: ${route.gasPriceWei}`);
+  console.log('');
+
+  return [
+    contractIn,
+    contractOut,
+    signer,
+    route,
+    provider,
+    balanceTokenIn,
+    balanceTokenOut
+  ];
+}
+
+export const approveForSwap = async (contractIn: any, contractOut: any, walletAddress: any, chainId: any, amountIn: any, provider: any, signer: any) => {
   // here we just create a transaction object (not sending it to blockchain).
   const approveTxUnsigned = await contractIn.populateTransaction.approve(MGAOP_SWAP_ROUTER_02_ADDRESS, amountIn);
   // by default chainid is not set https://ethereum.stackexchange.com/questions/94412/valueerror-code-32000-message-only-replay-protected-eip-155-transac
@@ -312,7 +312,7 @@ export const approveForSwap = async (contractIn: any, contractOut: any,walletAdd
   // wait till transaction completes
   const approveReceipt = await submittedTx.wait();
   if (approveReceipt.status === 0)
-      throw new Error("Approve transaction failed");
+    throw new Error("Approve transaction failed");
 
   return [
     signer,
@@ -326,28 +326,28 @@ export const makeswap = async (walletAddress: any, route: any, signer: any, cont
   const value = BigNumber.from(route.methodParameters.value);
 
   const transaction = {
-      data: route.methodParameters.calldata,
-      to: MGAOP_SWAP_ROUTER_02_ADDRESS,
-      value: value,
-      from: walletAddress,
-      gasPrice: route.gasPriceWei,
+    data: route.methodParameters.calldata,
+    to: MGAOP_SWAP_ROUTER_02_ADDRESS,
+    value: value,
+    from: walletAddress,
+    gasPrice: route.gasPriceWei,
 
-      // route.estimatedGasUsed might be too low!
-      // most of swaps I tested fit into 300,000 but for some complex swaps this gas is not enough.
-      // Loot at etherscan/polygonscan past results.
-      gasLimit: BigNumber.from("800000")
+    // route.estimatedGasUsed might be too low!
+    // most of swaps I tested fit into 300,000 but for some complex swaps this gas is not enough.
+    // Loot at etherscan/polygonscan past results.
+    gasLimit: BigNumber.from("800000")
   };
 
   var tx = await signer.sendTransaction(transaction);
   const receipt = await tx.wait();
   if (receipt.status === 0) {
-      throw new Error("Swap transaction failed");
+    throw new Error("Swap transaction failed");
   }
 
   // ============= Final part --- printing results
   const [newBalanceIn, newBalanceOut] = await Promise.all([
-      contractIn.balanceOf(walletAddress),
-      contractOut.balanceOf(walletAddress)
+    contractIn.balanceOf(walletAddress),
+    contractOut.balanceOf(walletAddress)
   ]);
 
   return [

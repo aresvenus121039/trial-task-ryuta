@@ -79,6 +79,7 @@ const Swap = () => {
   const [provide, setProvide] = React.useState()
   const [routee, setRoutee] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
+  const [filterName, setFilterName] = React.useState<string>('')
   
   const [step, setStep] = React.useState(0)
 
@@ -86,7 +87,7 @@ const Swap = () => {
 
   const { data: FromTokenBalance } = useBalance({
     address: address,
-    // token: fromToken as `0x${string}`,
+    token: fromToken as `0x${string}`,
     watch: true
   });
   const { data: ToTokenBalance } = useBalance({
@@ -110,7 +111,7 @@ const Swap = () => {
     { data : filterData, loading: filterLoading }
   ] = useLazyQuery(FILTER_QUERY,{
     variables: {
-      name: searchName
+      name: filterName
     }
   })
   React.useEffect(() => {
@@ -132,6 +133,7 @@ const Swap = () => {
     setToToken('')
     setFromTokenSymbolTemp('')
     setToTokenSymbolTemp('')
+    setSearchName('')
   },[chain_id])
 
   const walletAuth = React.useMemo(() => {
@@ -196,6 +198,7 @@ const Swap = () => {
 
   const onSearch = () => {
     filterAction()
+    setFilterName(searchName)
   }
 
   return (
@@ -220,15 +223,16 @@ const Swap = () => {
                 <div className="flex flex-col justify-center item-center">
                   <div className="bg-white rounded-3xl flex min-w-[80px] h-[32px]" style={{border: "1px solid #e9e6e6"}}>
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
-                      setShowModal(true);
-                      setSelectModal(1);
+                      setShowModal(true)
+                      setSearchName('')
+                      setSelectModal(1)
                     }}><div className="text-ellipsis text-nowrap overflow-hidden">{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}</div><span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
                   </div>
                 </div>
               </div>
-            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {fromBalance}</div>
+            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {FromTokenBalance?.formatted}</div>
             <p className="text-xs ml-1.5 mt-1 text-red-500" hidden={!isExceedBalance}>
               The amount entered exceeds the available balance.
             </p>
@@ -249,7 +253,8 @@ const Swap = () => {
                 <div className="flex flex-col justify-center item-center">
                   <div className="bg-white rounded-3xl flex min-w-[80px] h-[32px]" style={{border: "1px solid #e9e6e6"}}>
                     <button className="w-full h-full flex justify-center items-center pl-3 gap-3" onClick={() => {
-                      setShowModal(true);
+                      setShowModal(true)
+                      setSearchName('')
                       setSelectModal(2)
                     }}><div className="text-ellipsis text-nowrap overflow-hidden">{
                       toTokenSymbolTemp == '' ? "Select To-Token" : toTokenSymbolTemp
