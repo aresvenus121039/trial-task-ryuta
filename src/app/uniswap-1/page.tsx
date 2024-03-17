@@ -32,6 +32,27 @@ interface TokenType {
   chainId: number;
 }
 
+const TOKENLISTS_QUERY = gql`
+    query GET($amount: Int!) {
+      tokens(orderBy: volumeUSD, orderDirection: desc, first: $amount) {
+        decimals
+        name
+        symbol
+        id
+      }
+    }
+`
+const FILTER_QUERY = gql`
+        query GET($name: String!) {
+          tokens(orderBy: volumeUSD, orderDirection: desc, first: 10, where: {symbol: $name}) {
+            decimals
+            name
+            symbol
+            id
+          }
+        }
+    `
+
 const Swap = () => {
 
   const [amount, setAmount] = React.useState(0);
@@ -67,8 +88,49 @@ const Swap = () => {
 
   const { address, isConnected, isDisconnected } = useAccount();
 
+  const { data: FromTokenBalance } = useBalance({
+    address: address,
+    // token: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
+    watch: true
+  });
+  const { data: ToTokenBalance } = useBalance({
+    address: address,
+    // token: toToken as `0x${string}`,
+    watch: true
+  });
+
   const chain_id = useChainId()
 
+  // const {
+  //   loading,
+  //   data: data
+  // } = useQuery(TOKENLISTS_QUERY, {
+  //   variables: {
+  //     amount: 10
+  //   }
+  // })
+  // const [
+  //   filterAction,
+  //   { data : filterData, loading: filterLoading }
+  // ] = useLazyQuery(FILTER_QUERY,{
+  //   variables: {
+  //     name: filterName
+  //   }
+  // })
+  // React.useEffect(() => {
+  //   setIsLoading(filterLoading)
+  //   if(!filterLoading) setTokenLists(filterData?.tokens);    
+  // },[filterLoading])
+
+  // React.useEffect(() => {
+    // setIsLoading(loading)
+    // const initProvider = async () => {
+    //   const provider = await connector?.getProvider();
+    //   setProvide(provider);
+    // }
+    // if(!loading) setTokenLists(data?.tokens)
+    // initProvider()
+  // },[loading])
   React.useEffect(() => {
     setFromToken('')
     setToToken('')
@@ -158,6 +220,7 @@ const Swap = () => {
   };
 
   const onSearch = () => {
+    // filterAction()
     setFilterName(searchName)
 
     const data = allTokenLists.filter((item: TokenType) => searchName != '' ? item.symbol == searchName && item.chainId == chain_id : item.chainId == chain_id);
@@ -240,7 +303,7 @@ const Swap = () => {
 
         <div className="w-[90%]">
           <Button
-            disabled={!isExceedBalance && amount != 0 && fromToken && toToken && !isLoadings ? false : true}
+            // disabled={!isExceedBalance && amount != 0 && fromToken && toToken && !isLoadings ? false : true}
             onClick={onClickSwapButton}
             className="!py-3 bg-[#22222212] w-[100%] text-black h-3xl"
           >

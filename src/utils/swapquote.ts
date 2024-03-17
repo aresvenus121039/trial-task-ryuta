@@ -2,17 +2,18 @@
 // Uniswap and Web3 modules
 import { ethers, providers as ethersProviders, Signer, VoidSigner } from "ethers";
 import QuoterABI from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
-import { Pool, computePoolAddress } from '@uniswap/v3-sdk/'
-import { TradeType, Token, CurrencyAmount, Percent } from '@uniswap/sdk-core'
+import { Pool, computePoolAddress, Route as V3Route, FACTORY_ADDRESS } from '@uniswap/v3-sdk/'
+import { TradeType, Token, CurrencyAmount, Percent, ChainId, SWAP_ROUTER_02_ADDRESSES, QUOTER_ADDRESSES } from '@uniswap/sdk-core'
 import { AlphaRouter, log } from '@uniswap/smart-order-router'
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Factory.sol/IUniswapV3Factory.json'
 import { BigNumber } from '@ethersproject/bignumber';
-import { ChainId, CHAIN_INFO, RPCType } from "@/lib/chain";
+import {  CHAIN_INFO, RPCType } from "@/lib/chain";
 
 import ERC20_abi from "./abis/ERC20_abi.json"
 import ERC721_abi from "./abis/ERC721_abi.json"
-import { MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, MGAOP_QUOTER_CONTRACT_ADDRESS, MGAOP_SWAP_ROUTER_02_ADDRESS } from "@/lib/constants";
+import { POOL_FACTORY_CONTRACT_ADDRESS, QUOTER_CONTRACT_ADDRESS } from "@/lib/constants";
+import { DEPRECATED_RPC_PROVIDERS } from "@/lib/providers";
 
 export type InfuraChainName =
   | 'homestead'
@@ -26,21 +27,21 @@ export type InfuraChainName =
 
 export function getInfuraChainName(chainId: ChainId): InfuraChainName {
   switch (chainId) {
-    case ChainId.Mainnet:
+    case ChainId.MAINNET:
       return 'homestead'
-    case ChainId.Goerli:
+    case ChainId.GOERLI:
       return 'goerli'
-    case ChainId.ArbitrumOne:
+    case ChainId.ARBITRUM_ONE:
       return 'arbitrum'
-    case ChainId.Base:
+    case ChainId.BASE:
       return 'base'
-    case ChainId.Bnb:
+    case ChainId.BNB:
       return 'bnbsmartchain-mainnet'
-    case ChainId.Optimism:
+    case ChainId.OPTIMISM:
       return 'optimism'
-    case ChainId.Polygon:
+    case ChainId.POLYGON:
       return 'matic'
-    case ChainId.PolygonMumbai:
+    case ChainId.POLYGON_MUMBAI:
       return 'maticmum'
     default:
       throw new Error(`Unsupported eth infura chainId for ${chainId}`)
@@ -83,9 +84,9 @@ export const getBalance = async (providerr: any, address: string, chainId: numbe
     method: "eth_requestAccounts",
   });
 
-  // let provider = new ethers.providers.Web3Provider(providerr);
   let walletAddress = accounts[0];
-  let provider = createEthersProvider(chainId);
+  
+  let provider = DEPRECATED_RPC_PROVIDERS[chainId];
   if (provider == null) provider = new ethers.providers.Web3Provider(providerr);
   let signer = new VoidSigner(walletAddress, provider);
   // create token contracts and related objects
@@ -105,22 +106,14 @@ export const getBalance = async (providerr: any, address: string, chainId: numbe
 
   let [_, balance] = await getTokenAndBalance(contract);
   const bigNumberDec = ethers.BigNumber.from(balance).toString();
+console.log(ethers.utils.formatUnits(balance, _.decimals));
 
   return ethers.utils.formatUnits(balance, _.decimals)
 }
 
 export const initswap = async (tokenInContractAddress: string, tokenOutContractAddress: string, providerr: any, walletAddresss: any, chainId: number, inAmountStr: any) => {
 
-  const ethereum = (window as any).ethereum;
-  // const accounts = await ethereum.request({
-  //     method: "eth_requestAccounts",
-  // });
-  // const provider = new ethers.providers.Web3Provider(ethereum);
-  // const walletAddress = accounts[0];
-  // const signer = provider.getSigner(walletAddress);
-
-  let provider = createEthersProvider(chainId);
-  if (provider == null) provider = new ethers.providers.Web3Provider(providerr);
+  let provider = DEPRECATED_RPC_PROVIDERS[chainId];
   let signer = new VoidSigner(walletAddresss, provider);
 
   // create token contracts and related objects
@@ -150,15 +143,9 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
 
   console.log("Loading pool information...");
 
-  const factoryContract = new ethers.Contract(MGAOP_POOL_FACTORY_CONTRACT_ADDRESS, IUniswapV3Factory.abi, provider);
-
-  // loading pool smart contract address
-  const poolAddress = await factoryContract.getPool(
-    tokenIn.address,
-    tokenOut.address,
-    3000);  // commission - 3%
-  //const poolAddress = computePoolAddress({ UNISWAP_FACTORY_ADDRESS, tokenIn, tokenOut, fee: 3000 })
-
+  const poolAddress = computePoolAddress({ factoryAddress:FACTORY_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000 })
+  console.log(poolAddress);
+  
   if (Number(poolAddress).toString() === "0") // there is no such pool for provided In-Out tokens.
     throw `Error: No pool ${tokenIn.symbol}-${tokenOut.symbol}`;
 
@@ -220,16 +207,17 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
 
   console.log("Loading up quote for a swap...");
 
-  const amountIn = ethers.utils.parseUnits(inAmountStr, tokenIn.decimals);
+  const amountIn = ethers.utils.parseUnits(inAmountStr.toString(), tokenIn.decimals);
 
   // this is Uniswap quoter smart contract, same address on all chains
   // (from https://docs.uniswap.org/protocol/reference/deployments)
   // const UNISWAP_QUOTER_ADDRESS = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
-  const quoterContract = new ethers.Contract(MGAOP_QUOTER_CONTRACT_ADDRESS, QuoterABI.abi, provider);
+  
+  const quoterContract = new ethers.Contract(QUOTER_ADDRESSES[chainId], QuoterABI.abi, provider);
 
   const quotedAmountOut = await quoterContract.callStatic.quoteExactInputSingle(
-    tokenIn.address,
-    tokenOut.address,
+    tokenIn.address as `0x${string}`,
+    tokenOut.address as `0x${string}`,
     pool.fee,
     amountIn,
     0
@@ -252,7 +240,7 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
     TradeType.EXACT_INPUT,
     // swapOptions
     {
-      recipient: walletAddresss,
+      recipient : walletAddresss,
       slippageTolerance: new Percent(5, 100),          // Big slippage – for a test
       deadline: Math.floor(Date.now() / 1000 + 1800)    // add 1800 seconds – 30 mins deadline
     },
@@ -282,6 +270,16 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
   console.log(`   Gas Price Wei: ${route.gasPriceWei}`);
   console.log('');
 
+  console.log([
+    contractIn,
+    contractOut,
+    signer,
+    route,
+    provider,
+    balanceTokenIn,
+    balanceTokenOut
+  ]);
+  
   return [
     contractIn,
     contractOut,
@@ -295,11 +293,11 @@ export const initswap = async (tokenInContractAddress: string, tokenOutContractA
 
 export const approveForSwap = async (contractIn: any, contractOut: any, walletAddress: any, chainId: any, amountIn: any, provider: any, signer: any) => {
   // here we just create a transaction object (not sending it to blockchain).
-  const approveTxUnsigned = await contractIn.populateTransaction.approve(MGAOP_SWAP_ROUTER_02_ADDRESS, amountIn);
+  const approveTxUnsigned = await contractIn.populateTransaction.approve(SWAP_ROUTER_02_ADDRESSES(chainId), amountIn);
   // by default chainid is not set https://ethereum.stackexchange.com/questions/94412/valueerror-code-32000-message-only-replay-protected-eip-155-transac
   approveTxUnsigned.chainId = chainId;
   // estimate gas required to make approve call (not sending it to blockchain either)
-  approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(MGAOP_SWAP_ROUTER_02_ADDRESS, amountIn);
+  approveTxUnsigned.gasLimit = await contractIn.estimateGas.approve(SWAP_ROUTER_02_ADDRESSES(chainId), amountIn);
   // suggested gas price (increase if you want faster execution)
   approveTxUnsigned.gasPrice = await provider.getGasPrice();
   // nonce is the same as number previous transactions
@@ -321,13 +319,13 @@ export const approveForSwap = async (contractIn: any, contractOut: any, walletAd
   ]
 }
 
-export const makeswap = async (walletAddress: any, route: any, signer: any, contractIn: any, contractOut: any) => {
+export const makeswap = async (walletAddress: any, route: any, signer: any, contractIn: any, contractOut: any, chainId: any) => {
   console.log("Making a swap...");
   const value = BigNumber.from(route.methodParameters.value);
 
   const transaction = {
     data: route.methodParameters.calldata,
-    to: MGAOP_SWAP_ROUTER_02_ADDRESS,
+    to: SWAP_ROUTER_02_ADDRESSES(chainId),
     value: value,
     from: walletAddress,
     gasPrice: route.gasPriceWei,
