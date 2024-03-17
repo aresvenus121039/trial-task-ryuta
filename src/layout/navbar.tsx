@@ -41,6 +41,11 @@ const Navbar: React.FC = () => {
                         </Link>
                       </li>
                       <li className="mt-2 text-center" onClick={() => setShow(false)}>
+                        <Link href="/uniswaphook" className="text-black ">
+                          SwapHook
+                        </Link>
+                      </li>
+                      <li className="mt-2 text-center" onClick={() => setShow(false)}>
                         <Link href="/tokens" className="text-black ">
                           Tokens
                         </Link>
@@ -57,6 +62,11 @@ const Navbar: React.FC = () => {
               <li className="mt-2 ml-5 hidden lg:block">
                 <Link href="/uniswap" className="text-black ">
                   Swap
+                </Link>
+              </li>
+              <li className="mt-2 ml-5 hidden lg:block" onClick={() => setShow(false)}>
+                <Link href="/uniswaphook" className="text-black ">
+                  SwapHook
                 </Link>
               </li>
               <li className="mt-2 ml-5 hidden lg:block">

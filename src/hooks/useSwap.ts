@@ -22,14 +22,18 @@ interface State {
   tick: number;
 }
 
-const useSwap = async (fromTokenAddress: string, toTokenAddress: string) => {
+const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
   const chainId = useChainId();
   const { address } = useAccount();
   let provider = DEPRECATED_RPC_PROVIDERS[chainId];
   let signer = new VoidSigner(address as `0x${string}`, provider);
 
-  const contractIn = new ethers.Contract(fromTokenAddress, ERC20_abi, provider);
-  const contractOut = new ethers.Contract(toTokenAddress, ERC20_abi, provider);
+  let contractIn = new ethers.Contract(fromTokenAddress, ERC20_abi, provider);
+  let contractOut = new ethers.Contract(toTokenAddress, ERC20_abi, provider);
+  let tokenIn: Token, tokenOut: Token, poolAddress: string;
+  let poolContract: any;
+  let routerContract: any;
+  let balanceTokenIn: string, balanceTokenOut: string;
 
   const getTokenAndBalance = async function (contract: ethers.Contract) {
     var [dec, symbol, name, balance] = await Promise.all(
@@ -43,17 +47,22 @@ const useSwap = async (fromTokenAddress: string, toTokenAddress: string) => {
     return [new Token(chainId, contract.address, dec, symbol, name), balance];
   }
 
-
-  const [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
-  const [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
-
-  const poolAddress = computePoolAddress({ factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000 });
-  const poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
-  const routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
+  const init = async () => {
+    contractIn = new ethers.Contract(fromTokenAddress, ERC20_abi, provider);
+    contractOut = new ethers.Contract(toTokenAddress, ERC20_abi, provider);
+    
+    [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
+    [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
+  
+    poolAddress = computePoolAddress({ factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000 });
+    poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
+    routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
+  }
 
   const { approve } = useFromToken(fromTokenAddress);
 
   const swap = async (amount: number) => {
+    routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
     if (!routerContract) throw new Error('Router contract has not been initialized');
 
     await approve(SWAP_ROUTER_ADDRESS, amount);
@@ -80,6 +89,7 @@ const useSwap = async (fromTokenAddress: string, toTokenAddress: string) => {
   }
 
   const getQuote = async (amount: number) => {
+    await init();
     const [immutables, state ] = await Promise.all([getPoolImmutables(), getPoolState()]); 
 
     const pool = new Pool(
@@ -90,12 +100,14 @@ const useSwap = async (fromTokenAddress: string, toTokenAddress: string) => {
       state.liquidity.toString(),
       state.tick
     );
+    
     const outputAmount = amount * parseFloat(pool.token1Price.toFixed(2));
 
     return outputAmount;
   }
 
   const getPoolImmutables = async () => {
+
     if (!poolContract) throw new Error('Pool contract has not been initialized');
 
     const [token0, token1, fee] = await Promise.all([poolContract.token0(), poolContract.token1(), poolContract.fee()]);

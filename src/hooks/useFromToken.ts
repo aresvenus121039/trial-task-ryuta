@@ -12,8 +12,8 @@ const useFromToken = (fromTokenAddress: string) => {
 
   const contractIn = new ethers.Contract(fromTokenAddress, ERC20_abi, provider);
 
-  const approve = async (tokenAddress: string, amount: number) => {
-    if (!tokenAddress) throw new Error('From token contract has not been initialized');
+  const approve = async (addresses: string, amount: number) => {
+    if (!contractIn) throw new Error('From token contract has not been initialized');
 
     const getTokenAndBalance = async function (contract: ethers.Contract) {
       var [dec, symbol, name, balance] = await Promise.all(
@@ -31,7 +31,7 @@ const useFromToken = (fromTokenAddress: string) => {
 
     const parsedAmount = ethers.utils.parseUnits(amount.toString(), tokenIn.decimals);
 
-    const txn = contractIn.approve(address, parsedAmount);
+    const txn = contractIn.approve(addresses, parsedAmount);
     return txn;
   };
 

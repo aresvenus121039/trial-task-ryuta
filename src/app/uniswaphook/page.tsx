@@ -15,6 +15,7 @@ import gql from 'graphql-tag';
 import { useLazyQuery, useQuery } from '@apollo/client';
 import { redirect } from 'next/navigation';
 import { nativeOnChain } from '@/lib/tokens'
+import useSwap from '@/hooks/useSwap';
 
 interface RouteType {
   quoteGasAdjusted? : any;
@@ -31,28 +32,6 @@ interface TokenType {
   id?: string;
   chainId: number;
 }
-
-const TOKENLISTS_QUERY = gql`
-    query GET($amount: Int!) {
-      tokens(orderBy: volumeUSD, orderDirection: desc, first: $amount) {
-        decimals
-        name
-        symbol
-        id
-      }
-    }
-`
-const FILTER_QUERY = gql`
-        query GET($name: String!) {
-          tokens(orderBy: volumeUSD, orderDirection: desc, first: 10, where: {symbol: $name}) {
-            decimals
-            name
-            symbol
-            id
-          }
-        }
-    `
-
 const Swap = () => {
 
   const [amount, setAmount] = React.useState(0);
@@ -63,8 +42,6 @@ const Swap = () => {
   const [tokenLists, setTokenLists] = React.useState<TokenType[]>([]);
   const [allTokenLists, setAllTokenList] = React.useState<TokenType[]>([]);
   const [toToken, setToToken] = React.useState('');
-  const [fromBalance, setFromBalance] = React.useState(0);
-  const [toBalance, setToBalance] = React.useState(0);
   const [fromTokenAmount, setFromTokenAmount] = React.useState('');
   const [isOpenSuccess, setIsOpenSuccess] = React.useState(false);
   const [isOpenError, setIsOpenError] = React.useState(false);
@@ -75,62 +52,26 @@ const Swap = () => {
   const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
   const [nativeToken, setNativeToken] = React.useState<any>({})
 
-  const [fromContract, setFromContract] = React.useState()
-  const [toContract, setToContract] = React.useState()
-  const [signerr, setSignerr] = React.useState()
-  const [providerr, setProviderr] = React.useState()
   const [provide, setProvide] = React.useState()
   const [routee, setRoutee] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
-  const [filterName, setFilterName] = React.useState<string>('')
-  
-  const [step, setStep] = React.useState(0)
+  const { swap, getQuote } = useSwap(fromToken, toToken);
 
   const { address, isConnected, isDisconnected } = useAccount();
 
   const { data: FromTokenBalance } = useBalance({
     address: address,
-    // token: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
+    token: fromToken as `0x${string}`,
     watch: true
   });
   const { data: ToTokenBalance } = useBalance({
     address: address,
-    // token: toToken as `0x${string}`,
+    token: toToken as `0x${string}`,
     watch: true
   });
 
   const chain_id = useChainId()
 
-  // const {
-  //   loading,
-  //   data: data
-  // } = useQuery(TOKENLISTS_QUERY, {
-  //   variables: {
-  //     amount: 10
-  //   }
-  // })
-  // const [
-  //   filterAction,
-  //   { data : filterData, loading: filterLoading }
-  // ] = useLazyQuery(FILTER_QUERY,{
-  //   variables: {
-  //     name: filterName
-  //   }
-  // })
-  // React.useEffect(() => {
-  //   setIsLoading(filterLoading)
-  //   if(!filterLoading) setTokenLists(filterData?.tokens);    
-  // },[filterLoading])
-
-  // React.useEffect(() => {
-    // setIsLoading(loading)
-    // const initProvider = async () => {
-    //   const provider = await connector?.getProvider();
-    //   setProvide(provider);
-    // }
-    // if(!loading) setTokenLists(data?.tokens)
-    // initProvider()
-  // },[loading])
   React.useEffect(() => {
     setFromToken('')
     setToToken('')
@@ -170,58 +111,35 @@ const Swap = () => {
       return;
     }
     const amountIn = parseFloat(event.target.value || '0');
-    setAmount(amountIn);
-    setFromTokenAmount(event.target.value || '');
-    if (amountIn > fromBalance) {
+    if (amountIn > parseFloat(FromTokenBalance?.formatted || '0')) {
       setIsExceedBalance(true);
     } else {
       setIsExceedBalance(false);
     }
+    setAmount(amountIn);
+    setFromTokenAmount(event.target.value || '');
+
+    const quote = await getQuote(amountIn);
+  console.log(quote);
+  
+    setQuote(quote);
   };
 
   const onClickSwapButton = async () => {
-    if(step == 0){
-      // await initswap(fromToken, toToken,provide, address, chain_id, amount)
-      const [
-        contractIn,
-        contractOut,
-        signer,
-        route,
-        provider,
-        balanceTokenIn,
-        balanceTokenOut
-      ] = await initswap(fromToken, toToken,provide, address, chain_id, amount)
-      setFromContract(contractIn)
-      setToContract(contractOut)
-      setSignerr(signer)
-      setRoutee(route)
-      setFromBalance(balanceTokenIn)
-      setToBalance(balanceTokenOut)
-      setProviderr(provider)
-      setStep(1)
-    }else if(step == 1){
-      setIsLoading(true)
-      const [
-        signer,
-        contractIn,
-        contractOut
-      ] = await approveForSwap(fromContract, toContract, address, chain_id, amount, providerr, signerr);
-      setIsLoading(false)
-      setSignerr(signer)
-      setFromContract(contractIn)
-      setToContract(contractOut)
-      setStep(2)
-    }else if(step == 2){
-      setIsLoading(true)
-      await makeswap(address,routee, signerr, fromContract, toContract, chain_id)
-      setIsLoading(false)
-      setIsOpenSuccess(true)
+    try {
+      setIsLoading(true);
+console.log("before");
+
+      const txn = await swap(amount);
+      await txn.wait();
+      setIsLoading(false);
+      setIsOpenSuccess(true);
+    } catch (e) {
+      setIsOpenError(true);
     }
   };
 
   const onSearch = () => {
-    // filterAction()
-    setFilterName(searchName)
 
     const data = allTokenLists.filter((item: TokenType) => searchName != '' ? item.symbol == searchName && item.chainId == chain_id : item.chainId == chain_id);
     setTokenLists(data);
@@ -259,7 +177,7 @@ const Swap = () => {
                   </div>
                 </div>
               </div>
-            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {fromBalance}</div>
+            <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {FromTokenBalance?.formatted}</div>
             <p className="text-xs ml-1.5 mt-1 text-red-500" hidden={!isExceedBalance}>
               The amount entered exceeds the available balance.
             </p>
@@ -292,7 +210,7 @@ const Swap = () => {
                   </div>
                 </div>
               </div>
-              <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {toBalance}</div>
+              <div className="font-[485] text-[14px] text-[#7d7d7d] tracking-[-0.01em] text-right">Balance: {ToTokenBalance?.formatted}</div>
           </div>
           <div className="absolute top-[-17px] left-[50%] bg-white p-1">
             <div className="w-[25px] h-[25px] flex justify-center items-center bg-[#f9f9f9]">
@@ -303,12 +221,12 @@ const Swap = () => {
 
         <div className="w-[90%]">
           <Button
-            // disabled={!isExceedBalance && amount != 0 && fromToken && toToken && !isLoadings ? false : true}
+            disabled={!isExceedBalance && amount != 0 && fromToken && toToken && !isLoadings ? false : true}
             onClick={onClickSwapButton}
             className="!py-3 bg-[#22222212] w-[100%] text-black h-3xl"
           >
             {
-              fromToken == '' ? "Select Token" : step == 0 ? "Init" : step == 1 ? "Aprove" : "Swap"
+              fromToken == '' ? "Select Token" : "Swap"
             }
           </Button>
         </div>
@@ -360,15 +278,12 @@ const Swap = () => {
                     onClick={() => {
                       setShowModal(false)
                       setSearchName('')
-                      setFilterName('')
                       if(selectModal == 1){
                         setFromToken('');
                         setFromTokenSymbolTemp('');
-                        setFromBalance(0)
                       } else {
                         setToToken('');
                         setToTokenSymbolTemp('');
-                        setToBalance(0)
                       }
                     }}
                   >
@@ -406,16 +321,13 @@ const Swap = () => {
                 </div>
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
-                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
-                      const balance = await getBalance(provide, nativeToken.address, chain_id)                      
+                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {                 
                       if(selectModal == 2){
                         setToToken(nativeToken.address);
                         setToTokenSymbolTemp(nativeToken.symbol);
-                        setToBalance(parseFloat(balance))
                       }else if(selectModal == 1){
                         setFromToken(nativeToken.address);
                         setFromTokenSymbolTemp(nativeToken.symbol)
-                        setFromBalance(parseFloat(balance))
                       }
                       setShowModal(false);
                     }}>
@@ -430,15 +342,12 @@ const Swap = () => {
                   {
                     tokenLists && tokenLists.map((item: TokenType, id: number) => (
                       <div key={id} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {
-                        const balance = await getBalance(provide, item.address, chain_id)
                         if(selectModal == 2){
                           setToToken(item.address);
                           setToTokenSymbolTemp(item.symbol);
-                          setToBalance(parseFloat(balance))
                         }else if(selectModal == 1){
                           setFromToken(item.address);
                           setFromTokenSymbolTemp(item.symbol)
-                          setFromBalance(parseFloat(balance))
                         }
                         setShowModal(false);
                       }}>
