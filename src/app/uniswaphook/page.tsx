@@ -1,7 +1,6 @@
 "use client"
 import React from 'react';
 import { erc20ABI, useAccount, useBalance, useChainId, useContractRead, useContractWrite, usePrepareContractWrite  } from 'wagmi';
-import ISwapRouterArtifact from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from 'next/image';
@@ -15,7 +14,6 @@ import { redirect } from 'next/navigation';
 import { nativeOnChain } from '@/lib/tokens'
 import useSwap from '@/hooks/useSwap';
 import { BigNumber, ethers } from 'ethers';
-import { SWAP_ROUTER_ADDRESS } from '@uniswap/smart-order-router';
 import { objectToTuple } from '@/lib/format';
 import GeneralArtifact from '@/utils/abis/GeneralArtifact.json'
 import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
@@ -55,7 +53,7 @@ const Swap = () => {
   const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
   const [nativeToken, setNativeToken] = React.useState<any>({})
   const [fromDecimal, setFromDecimal] = React.useState<any>()
-  const [approveAmount, setApproveAmount] = React.useState<any>("0")
+  const [approveAmount, setApproveAmount] = React.useState<string>("0")
   const [params, setParams] = React.useState<any>(null);
   const [status, setStatus] = React.useState<number>(0);
 
@@ -113,14 +111,10 @@ const Swap = () => {
     const init = async () => {
       if(!approveLoading){
         if(status == 1){
-          console.log(approveData, approveAmount);
           setStatus(2)                      
           setParams(await swap(amount))
           
-          if(writeRoute) writeRoute()
-
-          console.log(params);
-          
+          if(writeRoute) writeRoute()          
         }
       }
     }
@@ -129,7 +123,6 @@ const Swap = () => {
 
   React.useEffect(() => {
     console.log("routeLoaing->",routeLoading);
-    
     if(!routeLoading){
       if(status == 2){
         setStatus(0);
@@ -138,6 +131,13 @@ const Swap = () => {
       }
     }
   },[routeLoading])
+
+  React.useEffect(() => {
+    if(approveAmount != "0" && status == 0){
+      if(write) write()
+      setStatus(1);
+    }
+  },[approveAmount])
 
   React.useEffect(() => {
     setFromToken('')
@@ -197,13 +197,7 @@ const Swap = () => {
     try {
       setIsLoading(true);
       const parsedAmount = ethers.utils.parseUnits(amount.toString(), fromDecimal);      
-      setApproveAmount(parsedAmount.toString())
-      
-      if(write) write()
-      console.log(parsedAmount.toString(),approveAmount);
-      
-      setStatus(1);
-      
+      setApproveAmount(parsedAmount.toString())      
     } catch (e) {
       setIsOpenError(true);
     }
