@@ -34,7 +34,6 @@ interface TokenType {
   chainId: number;
 }
 const Swap = () => {
-
   const [amount, setAmount] = React.useState(0);
   const [quote, setQuote] = React.useState(0);
   const [isLoadings, setIsLoading] = React.useState(false);
@@ -62,9 +61,8 @@ const Swap = () => {
   const chain_id = useChainId()
   const { swap, getQuote } = useSwap(fromToken, toToken);
 
-
   const { address, isConnected, isDisconnected } = useAccount();
-
+//////////////////////////////////////////////////------------acording to address, getting balance----------////////////
   const { data: FromTokenBalance } = useBalance({
     address: address,
     token: fromToken as `0x${string}`,
@@ -75,7 +73,10 @@ const Swap = () => {
     token: toToken as `0x${string}`,
     watch: true
   });
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+//////////////////////////////////////////////////----contracts hooks definition------------////////////////////////////
   const {data, isLoading} = useContractRead({
     address: fromToken as `0x${string}`,
     abi: erc20ABI,
@@ -101,20 +102,20 @@ const Swap = () => {
   const {data: routeData, write: writeRoute, isLoading: routeLoading } = useContractWrite({
     ...routeConfig,
   })
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+///////////////////////-----when contract hook method execute, side effect to catch action-----/////////////////////
+  // side effect to catch fromtoken's symbol
   React.useEffect(() => {
     if(!isLoading) setFromDecimal(data)
-    
   },[isLoading])
 
   React.useEffect(() => {
     const init = async () => {
       if(!approveLoading){
-        if(status == 1){
-          setStatus(2)                      
-          setParams(await swap(amount))
-          
-          if(writeRoute) writeRoute()          
+        if(status == 1){          
+          setParams(await swap(amount))    
         }
       }
     }
@@ -122,7 +123,13 @@ const Swap = () => {
   },[approveLoading])
 
   React.useEffect(() => {
-    console.log("routeLoaing->",routeLoading);
+    if(params != null && status == 1){
+      setStatus(2)       
+      if(writeRoute) writeRoute()  
+    }
+  },[params])
+
+  React.useEffect(() => {
     if(!routeLoading){
       if(status == 2){
         setStatus(0);
@@ -138,7 +145,10 @@ const Swap = () => {
       setStatus(1);
     }
   },[approveAmount])
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+////////////////////////////////////////////---------whenever switch to chainnet, initializing--------------////////////
   React.useEffect(() => {
     setFromToken('')
     setToToken('')
@@ -166,13 +176,19 @@ const Swap = () => {
     init()
     
   },[chain_id])
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+///////////////////////////////////////////----part to check if connect metamask wallet----////////////////////////////////
   const walletAuth = React.useMemo(() => {
     if((!isConnected || isDisconnected) && typeof window !== 'undefined'){
       redirect('/error/walletconnect')
     }
   },[isConnected, isDisconnected])
-    
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////-----Event Methods----//////////////////////////////////////////////////////////////    
   const onChangeAmountInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if(!fromToken || !toToken){
       alert("First Choose 'From Token' and 'To Token'");
@@ -207,7 +223,7 @@ const Swap = () => {
     const data = allTokenLists.filter((item: TokenType) => searchName != '' ? item.symbol == searchName && item.chainId == chain_id : item.chainId == chain_id);
     setTokenLists(data);
   }
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   return (
     <>
       {isLoadings && (

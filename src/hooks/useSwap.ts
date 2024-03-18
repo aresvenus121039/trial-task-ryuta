@@ -30,7 +30,6 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
   let contractOut = new ethers.Contract(toTokenAddress, ERC20_abi, provider);
   let tokenIn: Token, tokenOut: Token, poolAddress: string;
   let poolContract: any;
-  let routerContract: any;
   let balanceTokenIn: string, balanceTokenOut: string;
 
   const getTokenAndBalance = async function (contract: ethers.Contract) {
@@ -55,12 +54,10 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
     poolAddress = computePoolAddress({ factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000 });
 
     poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
-    routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
   }
 
   const swap = async (amount: number) => {
     await init();
-    if (!routerContract) throw new Error('Router contract has not been initialized');
 
     const immutables = await getPoolImmutables();
 
