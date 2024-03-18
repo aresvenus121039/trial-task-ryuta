@@ -1,9 +1,9 @@
 "use client"
 import React from 'react';
-import { useAccount, useBalance, useChainId  } from 'wagmi';
+import { erc20ABI, useAccount, useBalance, useChainId, useContractRead, useContractWrite, usePrepareContractWrite  } from 'wagmi';
+import ISwapRouterArtifact from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { initswap, approveForSwap, makeswap, getBalance } from '@/utils/swapquote';
 import Image from 'next/image';
 import {
   Accordion,
@@ -11,11 +11,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import gql from 'graphql-tag';
-import { useLazyQuery, useQuery } from '@apollo/client';
 import { redirect } from 'next/navigation';
 import { nativeOnChain } from '@/lib/tokens'
 import useSwap from '@/hooks/useSwap';
+import { BigNumber, ethers } from 'ethers';
+import { SWAP_ROUTER_ADDRESS } from '@uniswap/smart-order-router';
 
 interface RouteType {
   quoteGasAdjusted? : any;
@@ -51,11 +51,15 @@ const Swap = () => {
   const [toTokenSymbolTemp, setToTokenSymbolTemp] = React.useState<string>('')
   const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
   const [nativeToken, setNativeToken] = React.useState<any>({})
+  const [fromDecimal, setFromDecimal] = React.useState<any>()
+  const [approveAmount, setApproveAmount] = React.useState<BigNumber>(BigNumber.from(0))
+  const [params, setParams] = React.useState<any>(null);
+  const [status, setStatus] = React.useState<number>(0);
 
-  const [provide, setProvide] = React.useState()
   const [routee, setRoutee] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
   const { swap, getQuote } = useSwap(fromToken, toToken);
+
 
   const { address, isConnected, isDisconnected } = useAccount();
 
@@ -70,6 +74,60 @@ const Swap = () => {
     watch: true
   });
 
+  const {data, isError, isLoading} = useContractRead({
+    address: fromToken as `0x${string}`,
+    abi: erc20ABI,
+    functionName: 'decimals'
+  })
+
+  const { config } = usePrepareContractWrite({
+    address: fromToken as `0x${string}`,
+    abi: erc20ABI,
+    functionName: 'approve',
+    enabled: Boolean(approveAmount),
+    args: [fromToken as `0x${string}`, approveAmount.toBigInt()]
+  })
+  const { config: routeConfig } = usePrepareContractWrite({
+    address: SWAP_ROUTER_ADDRESS,
+    abi: ISwapRouterArtifact.abi,
+    functionName: 'exactInputSingle',
+    enabled: Boolean(params),
+    args: [params]
+   })
+
+  const {data: approveData, write, isLoading: approveLoading } = useContractWrite(config)
+  const {data: routeData, write: writeRoute, isLoading: routeLoading } = useContractWrite(routeConfig)
+
+  React.useEffect(() => {
+    if(!isLoading) setFromDecimal(data)
+    
+  },[isLoading])
+
+  React.useEffect(() => {
+    const init = async () => {
+      if(!approveLoading){
+        if(status == 1){
+          setStatus(2)
+          console.log(await swap(amount));
+          
+          setParams(await swap(amount))
+          if(writeRoute) writeRoute()
+        }
+      }
+    }
+    init()
+  },[approveLoading])
+
+  React.useEffect(() => {
+    if(!routeLoading){
+      if(status == 2){
+        setStatus(0);
+        setIsLoading(false);
+        setIsOpenSuccess(true);
+      }
+    }
+  },[routeLoading])
+
   const chain_id = useChainId()
 
   React.useEffect(() => {
@@ -78,6 +136,7 @@ const Swap = () => {
     setFromTokenSymbolTemp('')
     setToTokenSymbolTemp('')
     setSearchName('')
+    setIsOpenSuccess(false);
 
     const data: any = nativeOnChain(chain_id)
     setNativeToken(data.wrapped);
@@ -119,21 +178,18 @@ const Swap = () => {
     setAmount(amountIn);
     setFromTokenAmount(event.target.value || '');
 
-    const quote = await getQuote(amountIn);
-  console.log(quote);
-  
+    const quote = await getQuote(amountIn);  
     setQuote(quote);
   };
 
   const onClickSwapButton = async () => {
     try {
       setIsLoading(true);
-console.log("before");
-
-      const txn = await swap(amount);
-      await txn.wait();
-      setIsLoading(false);
-      setIsOpenSuccess(true);
+      const parsedAmount = ethers.utils.parseUnits(amount.toString(), fromDecimal);
+      setApproveAmount(parsedAmount)
+      if(write) await write()
+      setStatus(1);
+      
     } catch (e) {
       setIsOpenError(true);
     }
@@ -321,7 +377,8 @@ console.log("before");
                 </div>
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
-                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {                 
+                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {     
+                      alert(nativeToken.address)            
                       if(selectModal == 2){
                         setToToken(nativeToken.address);
                         setToTokenSymbolTemp(nativeToken.symbol);

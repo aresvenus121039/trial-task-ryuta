@@ -6,7 +6,6 @@ import { Token } from "@uniswap/sdk-core";
 import { Pool, computePoolAddress, Route as V3Route } from '@uniswap/v3-sdk';
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import ISwapRouterArtifact from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json';
-import useFromToken from "./useFromToken";
 import { POOL_FACTORY_CONTRACT_ADDRESS } from "@/lib/constants";
 import { SWAP_ROUTER_ADDRESS } from "@uniswap/smart-order-router";
 
@@ -26,7 +25,6 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
   const chainId = useChainId();
   const { address } = useAccount();
   let provider = DEPRECATED_RPC_PROVIDERS[chainId];
-  let signer = new VoidSigner(address as `0x${string}`, provider);
 
   let contractIn = new ethers.Contract(fromTokenAddress, ERC20_abi, provider);
   let contractOut = new ethers.Contract(toTokenAddress, ERC20_abi, provider);
@@ -59,13 +57,9 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
     routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
   }
 
-  const { approve } = useFromToken(fromTokenAddress);
-
   const swap = async (amount: number) => {
-    routerContract = new ethers.Contract(SWAP_ROUTER_ADDRESS, ISwapRouterArtifact.abi, provider)
+    await init();
     if (!routerContract) throw new Error('Router contract has not been initialized');
-
-    await approve(SWAP_ROUTER_ADDRESS, amount);
 
     const immutables = await getPoolImmutables();
 
@@ -80,12 +74,7 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
       amountOutMinimum: 0,
       sqrtPriceLimitX96: 0
     };
-
-    const txn = await routerContract.exactInputSingle(params, {
-      gasLimit: ethers.utils.hexlify(700000)
-    });
-
-    return txn
+    return params;
   }
 
   const getQuote = async (amount: number) => {
