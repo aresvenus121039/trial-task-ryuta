@@ -16,6 +16,9 @@ import { nativeOnChain } from '@/lib/tokens'
 import useSwap from '@/hooks/useSwap';
 import { BigNumber, ethers } from 'ethers';
 import { SWAP_ROUTER_ADDRESS } from '@uniswap/smart-order-router';
+import { objectToTuple } from '@/lib/format';
+import GeneralArtifact from '@/utils/abis/GeneralArtifact.json'
+import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
 
 interface RouteType {
   quoteGasAdjusted? : any;
@@ -52,12 +55,13 @@ const Swap = () => {
   const [fromTokenSymbolTemp, setFromTokenSymbolTemp] = React.useState<string>('')
   const [nativeToken, setNativeToken] = React.useState<any>({})
   const [fromDecimal, setFromDecimal] = React.useState<any>()
-  const [approveAmount, setApproveAmount] = React.useState<BigNumber>(BigNumber.from(0))
+  const [approveAmount, setApproveAmount] = React.useState<any>("0")
   const [params, setParams] = React.useState<any>(null);
   const [status, setStatus] = React.useState<number>(0);
 
   const [routee, setRoutee] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
+  const chain_id = useChainId()
   const { swap, getQuote } = useSwap(fromToken, toToken);
 
 
@@ -84,28 +88,20 @@ const Swap = () => {
     address: fromToken as `0x${string}`,
     abi: erc20ABI,
     functionName: 'approve',
-    enabled: Boolean(approveAmount),
-    args: [fromToken as `0x${string}`, approveAmount.toBigInt()]
+    enabled: true,
+    args: [SWAP_ROUTER_02_CONTRACT_ADDRESS[chain_id] as `0x${string}`, BigNumber.from(approveAmount).toBigInt()]
   })
   const { config: routeConfig } = usePrepareContractWrite({
-    address: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
-    abi: ISwapRouterArtifact.abi,
+    address: SWAP_ROUTER_02_CONTRACT_ADDRESS[chain_id] as `0x${string}`,
+    abi: GeneralArtifact,
     functionName: 'exactInputSingle',
-    enabled: Boolean(params),
-    args: [params,
-      {
-      gasLimit: ethers.utils.hexlify(700000)
-      }
-    ],
-    // gas: 1_000_000n
+    enabled: true,
+    args: [objectToTuple(params)]
    })
 
   const {data: approveData, write, isLoading: approveLoading } = useContractWrite(config)
   const {data: routeData, write: writeRoute, isLoading: routeLoading } = useContractWrite({
     ...routeConfig,
-    // request: {
-    //   gasLimit: Math.ceil(prepareConfig?.request?.gasLimit * GAS_LIMIT_MULTIPLIER)
-    // },
   })
 
   React.useEffect(() => {
@@ -117,11 +113,14 @@ const Swap = () => {
     const init = async () => {
       if(!approveLoading){
         if(status == 1){
-          console.log(approveData);
-          
-          setStatus(2)          
+          console.log(approveData, approveAmount);
+          setStatus(2)                      
           setParams(await swap(amount))
+          
           if(writeRoute) writeRoute()
+
+          console.log(params);
+          
         }
       }
     }
@@ -129,6 +128,8 @@ const Swap = () => {
   },[approveLoading])
 
   React.useEffect(() => {
+    console.log("routeLoaing->",routeLoading);
+    
     if(!routeLoading){
       if(status == 2){
         setStatus(0);
@@ -137,8 +138,6 @@ const Swap = () => {
       }
     }
   },[routeLoading])
-
-  const chain_id = useChainId()
 
   React.useEffect(() => {
     setFromToken('')
@@ -197,9 +196,12 @@ const Swap = () => {
   const onClickSwapButton = async () => {
     try {
       setIsLoading(true);
-      const parsedAmount = ethers.utils.parseUnits(amount.toString(), fromDecimal);
-      setApproveAmount(parsedAmount)
-      if(write) await write()
+      const parsedAmount = ethers.utils.parseUnits(amount.toString(), fromDecimal);      
+      setApproveAmount(parsedAmount.toString())
+      
+      if(write) write()
+      console.log(parsedAmount.toString(),approveAmount);
+      
       setStatus(1);
       
     } catch (e) {
@@ -208,7 +210,6 @@ const Swap = () => {
   };
 
   const onSearch = () => {
-
     const data = allTokenLists.filter((item: TokenType) => searchName != '' ? item.symbol == searchName && item.chainId == chain_id : item.chainId == chain_id);
     setTokenLists(data);
   }

@@ -37,3 +37,15 @@ export const updowncheck = (current: string, before: string) => {
     percent
   ]
 }
+
+export const objectToTuple = (obj: any) => {
+  // Get the keys of the object
+  if(obj == null) return;
+  const keys = Object.keys(obj);
+  
+  // Create an array of values using the keys
+  const values = keys.map(key => obj[key]);
+  
+  // Return the array as a tuple
+  return values;
+}
