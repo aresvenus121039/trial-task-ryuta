@@ -74,7 +74,7 @@ const Swap = () => {
     watch: true
   });
 
-  const {data, isError, isLoading} = useContractRead({
+  const {data, isLoading} = useContractRead({
     address: fromToken as `0x${string}`,
     abi: erc20ABI,
     functionName: 'decimals'
@@ -88,15 +88,25 @@ const Swap = () => {
     args: [fromToken as `0x${string}`, approveAmount.toBigInt()]
   })
   const { config: routeConfig } = usePrepareContractWrite({
-    address: SWAP_ROUTER_ADDRESS,
+    address: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
     abi: ISwapRouterArtifact.abi,
     functionName: 'exactInputSingle',
     enabled: Boolean(params),
-    args: [params]
+    args: [params,
+      {
+      gasLimit: ethers.utils.hexlify(700000)
+      }
+    ],
+    // gas: 1_000_000n
    })
 
   const {data: approveData, write, isLoading: approveLoading } = useContractWrite(config)
-  const {data: routeData, write: writeRoute, isLoading: routeLoading } = useContractWrite(routeConfig)
+  const {data: routeData, write: writeRoute, isLoading: routeLoading } = useContractWrite({
+    ...routeConfig,
+    // request: {
+    //   gasLimit: Math.ceil(prepareConfig?.request?.gasLimit * GAS_LIMIT_MULTIPLIER)
+    // },
+  })
 
   React.useEffect(() => {
     if(!isLoading) setFromDecimal(data)
@@ -107,9 +117,9 @@ const Swap = () => {
     const init = async () => {
       if(!approveLoading){
         if(status == 1){
-          setStatus(2)
-          console.log(await swap(amount));
+          console.log(approveData);
           
+          setStatus(2)          
           setParams(await swap(amount))
           if(writeRoute) writeRoute()
         }
@@ -175,11 +185,13 @@ const Swap = () => {
     } else {
       setIsExceedBalance(false);
     }
+    setIsLoading(true);
     setAmount(amountIn);
     setFromTokenAmount(event.target.value || '');
 
     const quote = await getQuote(amountIn);  
     setQuote(quote);
+    setIsLoading(false);
   };
 
   const onClickSwapButton = async () => {
@@ -377,8 +389,7 @@ const Swap = () => {
                 </div>
                 <div className="relative p-5 flex-auto min-h-[400px] max-h-[400px] overflow-y-scroll">
                   <h3 className="text-sm font=semibold">Popular tokens</h3>
-                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {     
-                      alert(nativeToken.address)            
+                    <div key={-1} className="flex gap-3 mt-3 cursor-pointer" onClick={async () => {           
                       if(selectModal == 2){
                         setToToken(nativeToken.address);
                         setToTokenSymbolTemp(nativeToken.symbol);
