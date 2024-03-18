@@ -11,7 +11,7 @@ const WalletError = () => {
   
   useEffect(() => {
     if(isConnected)
-      redirect('/uniswap')
+      redirect('/uniswaphook')
   },[isConnected])
   return(
     <div className="w-full h-full flex justify-center items-center">
