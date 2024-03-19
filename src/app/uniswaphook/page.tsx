@@ -18,6 +18,7 @@ import { objectToTuple } from '@/lib/format';
 import GeneralArtifact from '@/utils/abis/GeneralArtifact.json'
 import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
 import { DEPRECATED_RPC_PROVIDERS } from '@/lib/providers';
+import { SWAP_ROUTER_02_ADDRESSES } from '@uniswap/sdk-core';
 
 interface TransactionType{
   gasPrice? : any;
@@ -60,7 +61,7 @@ const Swap = () => {
   const [status, setStatus] = React.useState<number>(0);
   const [transactions, setTransaction] = React.useState<TransactionType>({})
 
-  const [routee, setRoutee] = React.useState<RouteType>({})
+  const [receipts, setReceipts] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
   const chain_id = useChainId()
   const { swap, getQuote } = useSwap(fromToken, toToken);
@@ -140,7 +141,7 @@ const Swap = () => {
           const transaction = await DEPRECATED_RPC_PROVIDERS[chain_id].getTransaction(routeData?.hash);
           setTransaction(transaction);
           transaction.wait().then((receipt: any) => {
-            setRoutee(receipt);
+            setReceipts(receipt);
             setStatus(0);
             setIsLoading(false);
             setIsOpenSuccess(true);
@@ -262,6 +263,9 @@ const Swap = () => {
                       setShowModal(true)
                       setSearchName('')
                       setSelectModal(1)
+                      setIsExceedBalance(false)
+                      setIsOpenError(false)
+                      setIsOpenSuccess(false)
                     }}><div className="text-ellipsis text-nowrap overflow-hidden">{fromTokenSymbolTemp == '' ? "Select From-Token" : fromTokenSymbolTemp}</div><span>
                       <Image className="mr-2" src={"/arrow-down.png"} width={14} height={14} alt='arrow down'/>
                     </span></button>
@@ -293,6 +297,9 @@ const Swap = () => {
                       setShowModal(true)
                       setSearchName('')
                       setSelectModal(2)
+                      setIsExceedBalance(false)
+                      setIsOpenError(false)
+                      setIsOpenSuccess(false)
                     }}><div className="text-ellipsis text-nowrap overflow-hidden">{
                       toTokenSymbolTemp == '' ? "Select To-Token" : toTokenSymbolTemp
                     }</div><span>
@@ -327,8 +334,8 @@ const Swap = () => {
               <AccordionTrigger>Information for swap</AccordionTrigger>
               <AccordionContent>
                 <div>
-                  {/* <p>Max Fee Per Gas: {( routee && routee?.maxFeePerGas?.toNumber() ) && routee?.maxFeePerGas?.toNumber() / 1000000000}</p> */}
-                  <p>Gas Price: {( routee && routee?.effectiveGasPrice?.toNumber() ) && routee?.effectiveGasPrice?.toNumber() / 1000000000} Gwei</p>
+                  {/* <p>Max Fee Per Gas: {( receipts && receipts?.maxFeePerGas?.toNumber() ) && receipts?.maxFeePerGas?.toNumber() / 1000000000}</p> */}
+                  <p>Gas Price: {( receipts && receipts?.effectiveGasPrice?.toNumber() ) && receipts?.effectiveGasPrice?.toNumber() / 1000000000} Gwei</p>
                   <p>Transaction Ether Fee: {transactions && transactions?.gasPrice?.mul(transactions?.gasLimit) && ethers.utils.formatEther(transactions?.gasPrice?.mul(transactions?.gasLimit))}</p>
                 </div>
               </AccordionContent>

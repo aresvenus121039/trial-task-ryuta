@@ -24,7 +24,13 @@ const handler = NextAuth({
         let {data: user} = await supabase
           .from('users')
           .select("*")
-          .eq('email', credentials?.email);        
+          .eq('email', credentials?.email);     
+          
+        // const user = await prisma.users.findUnique({
+        //   where: {
+        //     email: credentials?.email,
+        //   },
+        // })  
           
         if(user)
           passwordCorrect = await compare(

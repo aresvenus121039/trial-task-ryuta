@@ -11,12 +11,18 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(password, 10);
 
-    let validateData = await supabase
+    let { data: validateData } = await supabase
       .from('users')
       .select("*")
-      .eq('email', email);     
+      .eq('email', email);  
+      
+    // const validateData = await prisma.users.findUnique({
+    //   where: {
+    //     email: email,
+    //   },
+    // })    
 
-    if(validateData.data && validateData.data?.length > 0)
+    if(validateData && validateData?.length > 0)
       message = "This Email is already registered!"
     else {
       const { data, error } = await supabase
@@ -25,6 +31,15 @@ export async function POST(request: Request) {
           { email: email, password: hashedPassword, address: address}
         ])
         .select();
+
+      // const data = await prisma.users.create({
+      //   data: {
+      //     email: email,
+      //     password: hashedPassword,
+      //     address: address
+      //   },
+      // })
+
       if(data != null){
         message = "success";
         state = 1;
