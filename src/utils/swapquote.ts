@@ -73,7 +73,7 @@ export function createEthersProvider(
       return new ethersProviders.JsonRpcProvider(altPublicRPCUrl)
     }
   } catch (error) {
-    console.log("error");
+    console.log("error",error);
     return null
   }
 }

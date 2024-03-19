@@ -3,7 +3,7 @@ import { useChainId, useAccount } from "wagmi";
 import { DEPRECATED_RPC_PROVIDERS } from "@/lib/providers";
 import ERC20_abi from '@/utils/abis/ERC20_abi.json';
 import { Token } from "@uniswap/sdk-core";
-import { Pool, computePoolAddress, Route as V3Route, FACTORY_ADDRESS } from '@uniswap/v3-sdk';
+import { Pool, computePoolAddress, Route as V3Route, FACTORY_ADDRESS, POOL_INIT_CODE_HASH } from '@uniswap/v3-sdk';
 import IUniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import ISwapRouterArtifact from '@uniswap/v3-periphery/artifacts/contracts/interfaces/ISwapRouter.sol/ISwapRouter.json';
 import { POOL_FACTORY_CONTRACT_ADDRESS } from "@/lib/constants";
@@ -51,7 +51,7 @@ const useSwap = (fromTokenAddress: string, toTokenAddress: string) => {
     [tokenIn, balanceTokenIn] = await getTokenAndBalance(contractIn);
     [tokenOut, balanceTokenOut] = await getTokenAndBalance(contractOut);
  
-    poolAddress = computePoolAddress({ factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000 });
+    poolAddress = computePoolAddress({ factoryAddress: POOL_FACTORY_CONTRACT_ADDRESS[chainId], tokenA: tokenIn, tokenB: tokenOut, fee: 3000,initCodeHashManualOverride: POOL_INIT_CODE_HASH });
 
     poolContract = new ethers.Contract(poolAddress, IUniswapV3Pool.abi, provider);
   }

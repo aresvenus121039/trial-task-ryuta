@@ -17,13 +17,11 @@ import { BigNumber, ethers } from 'ethers';
 import { objectToTuple } from '@/lib/format';
 import GeneralArtifact from '@/utils/abis/GeneralArtifact.json'
 import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
+import { DEPRECATED_RPC_PROVIDERS } from '@/lib/providers';
 
 interface RouteType {
-  quoteGasAdjusted? : any;
-  estimatedGasUsedQuoteToken? : any;
-  estimatedGasUsedUSD? : any;
-  estimatedGasUsed? : any;
-  gasPriceWei? : any;
+  gasPrice? : BigNumber;
+  maxFeePerGas?: BigNumber;
 }
 interface TokenType {
   address: string;
@@ -34,8 +32,8 @@ interface TokenType {
   chainId: number;
 }
 const Swap = () => {
-  const [amount, setAmount] = React.useState(0);
-  const [quote, setQuote] = React.useState(0);
+  const [amount, setAmount] = React.useState<number>(0);
+  const [quote, setQuote] = React.useState<number>(0);
   const [isLoadings, setIsLoading] = React.useState(false);
   const [isExceedBalance, setIsExceedBalance] = React.useState(false);
   const [fromToken, setFromToken] = React.useState<string>('');
@@ -130,13 +128,19 @@ const Swap = () => {
   },[params])
 
   React.useEffect(() => {
-    if(!routeLoading){
-      if(status == 2){
-        setStatus(0);
-        setIsLoading(false);
-        setIsOpenSuccess(true);
+    const init = async () => {
+      if(!routeLoading){
+        if(status == 2){
+          const transaction = await DEPRECATED_RPC_PROVIDERS[chain_id].getTransaction(routeData?.hash);
+          setRoutee(transaction);
+          
+          setStatus(0);
+          setIsLoading(false);
+          setIsOpenSuccess(true);
+        }
       }
     }
+    init()
   },[routeLoading])
 
   React.useEffect(() => {
@@ -315,11 +319,8 @@ const Swap = () => {
               <AccordionTrigger>Information for swap</AccordionTrigger>
               <AccordionContent>
                 <div>
-                  <p>Gas Adjusted Quote: {routee && routee?.quoteGasAdjusted?.toFixed()}</p>
-                  <p>Gas Used Quote Token: {routee && routee?.estimatedGasUsedQuoteToken?.toFixed()}</p>
-                  <p>Gas Used USD: {routee && routee?.estimatedGasUsedUSD?.toFixed()}</p>
-                  <p>Gas Used: {routee && routee?.estimatedGasUsed?.toString()}</p>
-                  <p>Gas Price Wei: {routee && routee?.gasPriceWei}</p>
+                  <p>Max Fee Per Gas: {( routee && routee?.maxFeePerGas?.toNumber() ) && routee?.maxFeePerGas?.toNumber() / 1000000000}</p>
+                  <p>Gas Price Gwei: {( routee && routee?.gasPrice?.toNumber() ) && routee?.gasPrice?.toNumber() / 1000000000}</p>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -404,9 +405,14 @@ const Swap = () => {
                       if(selectModal == 2){
                         setToToken(nativeToken.address);
                         setToTokenSymbolTemp(nativeToken.symbol);
+                        setAmount(0);
+                        setQuote(0)
                       }else if(selectModal == 1){
                         setFromToken(nativeToken.address);
                         setFromTokenSymbolTemp(nativeToken.symbol)
+                        setAmount(0);
+                        setFromTokenAmount('');
+                        setQuote(0)
                       }
                       setShowModal(false);
                     }}>
@@ -424,9 +430,14 @@ const Swap = () => {
                         if(selectModal == 2){
                           setToToken(item.address);
                           setToTokenSymbolTemp(item.symbol);
+                          setAmount(0);
+                          setQuote(0)
                         }else if(selectModal == 1){
                           setFromToken(item.address);
                           setFromTokenSymbolTemp(item.symbol)
+                          setAmount(0);
+                          setFromTokenAmount('');
+                          setQuote(0)
                         }
                         setShowModal(false);
                       }}>
