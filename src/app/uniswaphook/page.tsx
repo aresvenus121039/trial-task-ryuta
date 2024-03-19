@@ -20,8 +20,9 @@ import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
 import { DEPRECATED_RPC_PROVIDERS } from '@/lib/providers';
 
 interface RouteType {
-  gasPrice? : BigNumber;
-  maxFeePerGas?: BigNumber;
+  gasPrice? : any;
+  maxFeePerGas?: any;
+  gasLimit?: any;
 }
 interface TokenType {
   address: string;
@@ -132,6 +133,8 @@ const Swap = () => {
       if(!routeLoading){
         if(status == 2){
           const transaction = await DEPRECATED_RPC_PROVIDERS[chain_id].getTransaction(routeData?.hash);
+          console.log(transaction);
+          
           setRoutee(transaction);
           
           setStatus(0);
@@ -321,6 +324,7 @@ const Swap = () => {
                 <div>
                   <p>Max Fee Per Gas: {( routee && routee?.maxFeePerGas?.toNumber() ) && routee?.maxFeePerGas?.toNumber() / 1000000000}</p>
                   <p>Gas Price Gwei: {( routee && routee?.gasPrice?.toNumber() ) && routee?.gasPrice?.toNumber() / 1000000000}</p>
+                  <p>Transaction Ether Fee: {routee && routee?.gasPrice?.mul(routee?.gasLimit) && ethers.utils.formatEther(routee?.gasPrice?.mul(routee?.gasLimit))}</p>
                 </div>
               </AccordionContent>
             </AccordionItem>
