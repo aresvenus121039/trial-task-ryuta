@@ -19,10 +19,14 @@ import GeneralArtifact from '@/utils/abis/GeneralArtifact.json'
 import { SWAP_ROUTER_02_CONTRACT_ADDRESS } from '@/lib/constants';
 import { DEPRECATED_RPC_PROVIDERS } from '@/lib/providers';
 
-interface RouteType {
+interface TransactionType{
   gasPrice? : any;
-  maxFeePerGas?: any;
-  gasLimit?: any;
+  gasLimit? : any;
+}
+interface RouteType {
+  effectiveGasPrice? : any;
+  gasUsed?: any;
+  cumulativeGasUsed?: any;
 }
 interface TokenType {
   address: string;
@@ -54,6 +58,7 @@ const Swap = () => {
   const [approveAmount, setApproveAmount] = React.useState<string>("0")
   const [params, setParams] = React.useState<any>(null);
   const [status, setStatus] = React.useState<number>(0);
+  const [transactions, setTransaction] = React.useState<TransactionType>({})
 
   const [routee, setRoutee] = React.useState<RouteType>({})
   const [searchName, setSearchName] = React.useState<string>('')
@@ -133,13 +138,13 @@ const Swap = () => {
       if(!routeLoading){
         if(status == 2){
           const transaction = await DEPRECATED_RPC_PROVIDERS[chain_id].getTransaction(routeData?.hash);
-          console.log(transaction);
-          
-          setRoutee(transaction);
-          
-          setStatus(0);
-          setIsLoading(false);
-          setIsOpenSuccess(true);
+          setTransaction(transaction);
+          transaction.wait().then((receipt: any) => {
+            setRoutee(receipt);
+            setStatus(0);
+            setIsLoading(false);
+            setIsOpenSuccess(true);
+          })
         }
       }
     }
@@ -322,9 +327,9 @@ const Swap = () => {
               <AccordionTrigger>Information for swap</AccordionTrigger>
               <AccordionContent>
                 <div>
-                  <p>Max Fee Per Gas: {( routee && routee?.maxFeePerGas?.toNumber() ) && routee?.maxFeePerGas?.toNumber() / 1000000000}</p>
-                  <p>Gas Price Gwei: {( routee && routee?.gasPrice?.toNumber() ) && routee?.gasPrice?.toNumber() / 1000000000}</p>
-                  <p>Transaction Ether Fee: {routee && routee?.gasPrice?.mul(routee?.gasLimit) && ethers.utils.formatEther(routee?.gasPrice?.mul(routee?.gasLimit))}</p>
+                  {/* <p>Max Fee Per Gas: {( routee && routee?.maxFeePerGas?.toNumber() ) && routee?.maxFeePerGas?.toNumber() / 1000000000}</p> */}
+                  <p>Gas Price: {( routee && routee?.effectiveGasPrice?.toNumber() ) && routee?.effectiveGasPrice?.toNumber() / 1000000000} Gwei</p>
+                  <p>Transaction Ether Fee: {transactions && transactions?.gasPrice?.mul(transactions?.gasLimit) && ethers.utils.formatEther(transactions?.gasPrice?.mul(transactions?.gasLimit))}</p>
                 </div>
               </AccordionContent>
             </AccordionItem>
